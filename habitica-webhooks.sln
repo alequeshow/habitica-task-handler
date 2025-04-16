@@ -1,0 +1,48 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Alequeshow.Habitica.Webhooks", "src\Alequeshow.Habitica.Webhooks\Alequeshow.Habitica.Webhooks.csproj", "{5953B9B5-3CC5-71D2-B0D6-479A9106BA2F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Alequeshow.Habitica.Webhooks (1)", "Alequeshow.Habitica.Webhooks (1)", "{4B843C4D-A449-93A3-F7FF-4640E1FA80F2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "obj", "obj", "{E690514C-1A6F-AC26-934A-12F42F041505}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Debug", "Debug", "{645178C8-4F9F-F845-27B5-D092505296CC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "net8.0", "net8.0", "{81DA0EA1-F0E0-67A4-58F0-8A08E813C920}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WorkerExtensions", "src\Alequeshow.Habitica.Webhooks\obj\Debug\net8.0\WorkerExtensions\WorkerExtensions.csproj", "{525379A7-D0FA-11A6-DF5B-B7E3AA744FEF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5953B9B5-3CC5-71D2-B0D6-479A9106BA2F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5953B9B5-3CC5-71D2-B0D6-479A9106BA2F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5953B9B5-3CC5-71D2-B0D6-479A9106BA2F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5953B9B5-3CC5-71D2-B0D6-479A9106BA2F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{525379A7-D0FA-11A6-DF5B-B7E3AA744FEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{525379A7-D0FA-11A6-DF5B-B7E3AA744FEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{525379A7-D0FA-11A6-DF5B-B7E3AA744FEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{525379A7-D0FA-11A6-DF5B-B7E3AA744FEF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5953B9B5-3CC5-71D2-B0D6-479A9106BA2F} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{4B843C4D-A449-93A3-F7FF-4640E1FA80F2} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{E690514C-1A6F-AC26-934A-12F42F041505} = {4B843C4D-A449-93A3-F7FF-4640E1FA80F2}
+		{645178C8-4F9F-F845-27B5-D092505296CC} = {E690514C-1A6F-AC26-934A-12F42F041505}
+		{81DA0EA1-F0E0-67A4-58F0-8A08E813C920} = {645178C8-4F9F-F845-27B5-D092505296CC}
+		{525379A7-D0FA-11A6-DF5B-B7E3AA744FEF} = {81DA0EA1-F0E0-67A4-58F0-8A08E813C920}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EE03A923-9B55-4B1B-8B8D-02D12E533079}
+	EndGlobalSection
+EndGlobal
