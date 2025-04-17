@@ -15,10 +15,21 @@ namespace Alequeshow.Habitica.Webhooks
         }
 
         [Function("TaskEventWebHook")]
-        public IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest req)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest request)
         {
-            _logger.LogInformation("C# HTTP trigger function processed a request.");
-            return new OkObjectResult("Welcome to Azure Functions!");
+            try
+            {
+                var requestContent = await request.ToRequestContent();
+                
+                _logger.LogInformation("Received request: {RequestBody}", requestContent.ToString());
+            }
+            catch (Exception ex)
+            {                
+                _logger.LogError(ex, "Error while processing request");
+
+            }
+
+            return new OkObjectResult("OK");
         }
     }
 }
