@@ -4,18 +4,17 @@ using Microsoft.Extensions.Logging;
 namespace Alequeshow.Habitica.Webhooks.Service;
 
 public class TaskService(
-        ILogger<TaskService> logger) : ITaskService
+        ILogger<TaskService> logger,
+        IHabiticaApiService habiticaApi) : ITaskService
 {
     private const string SnoozeableTagId = "1557c38a-33f0-4391-8fc1-b3f01eb94906";
 
     public Task HandleTaskActivityAsync(Domain.TaskActivityEvent taskActivity)
     {
-        HandleSnoozedTaskAsync(taskActivity);
-
-        return Task.CompletedTask;
+        return HandleSnoozedTaskAsync(taskActivity);
     }
 
-    private Task HandleSnoozedTaskAsync(Domain.TaskActivityEvent taskActivity)
+    private async Task HandleSnoozedTaskAsync(Domain.TaskActivityEvent taskActivity)
     {
         if(IsSnoozeableTask(taskActivity))
         {
@@ -28,12 +27,13 @@ public class TaskService(
                 Checklist = taskActivity.Task.Checklist?.Select(
                     item => item with 
                     { 
-                        Id = null
+                        Id = Guid.NewGuid().ToString(),
                     }
                 ).ToList(),
                 Reminders = [
                     new Domain.Reminder
                     {
+                        Id = Guid.NewGuid().ToString(),
                         Time = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 0, 0),
                     }
                 ],
@@ -46,9 +46,8 @@ public class TaskService(
 
             logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask.ToString());
 
+            var result = await habiticaApi.CreateUserTasksAsync(todoTask);
         }
-
-        return Task.CompletedTask;
     }
 
     private static bool IsSnoozeableTask(Domain.TaskActivityEvent taskActivity)

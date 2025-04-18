@@ -1,18 +1,32 @@
 using Alequeshow.Habitica.Webhooks.Service;
 using Alequeshow.Habitica.Webhooks.Service.Interfaces;
+using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Refit;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.ConfigureFunctionsWebApplication();
 
-// Application Insights isn't enabled by default. See https://aka.ms/AAt8mw4.
-// builder.Services
-//     .AddApplicationInsightsTelemetryWorkerService()
-//     .ConfigureFunctionsApplicationInsights();
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
+
+builder.Configuration
+    .AddUserSecrets<Program>();
+
+var configuration = builder.Configuration;
 
 builder.Services.AddSingleton<ITaskService, TaskService>();
+builder.Services.AddRefitClient<IHabiticaApiService>()
+    .ConfigureHttpClient(httpClient => 
+    {
+        httpClient.BaseAddress = new Uri(configuration["HABITICA_URL"]);
+        httpClient.DefaultRequestHeaders.Add("x-api-user", configuration["HABITICA_USER_ID"]);
+        httpClient.DefaultRequestHeaders.Add("x-api-key", configuration["HABITICA_USER_TOKEN"]);
+    });
 
 builder.Build().Run();
