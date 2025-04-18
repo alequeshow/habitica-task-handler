@@ -1,3 +1,4 @@
+using Alequeshow.Habitica.Webhooks.Service.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
@@ -5,28 +6,28 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Alequeshow.Habitica.Webhooks
 {
-    public class TaskEventWebHook
+    public class TaskEventWebHook(
+        ILogger<TaskEventWebHook> logger,
+        ITaskService taskService)
     {
-        private readonly ILogger<TaskEventWebHook> _logger;
-
-        public TaskEventWebHook(ILogger<TaskEventWebHook> logger)
-        {
-            _logger = logger;
-        }
-
         [Function("TaskEventWebHook")]
         public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post")] HttpRequest request)
         {
             try
             {
                 var requestContent = await request.ToRequestContent();
-                
-                _logger.LogInformation("Received request: {RequestBody}", requestContent.ToString());
+
+                logger.LogInformation("Received request: {RequestBody}", requestContent.ToString());
+
+                if(requestContent.Body != null)
+                {
+                    await taskService.HandleTaskActivityAsync(requestContent.Body);                    
+                }
             }
             catch (Exception ex)
-            {                
-                _logger.LogError(ex, "Error while processing request");
-
+            {
+                var payload = request.ReadFromJsonAsync<string>();
+                logger.LogError(ex, "Error while processing request. {Payload} |", payload);
             }
 
             return new OkObjectResult("OK");

@@ -1,6 +1,6 @@
 namespace Alequeshow.Habitica.Webhooks.Domain;
 
-public class Reminder
+public record Reminder
 {
     public string? Id { get; set; }
 

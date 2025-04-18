@@ -1,6 +1,6 @@
 namespace Alequeshow.Habitica.Webhooks.Domain;
 
-public class CheckItem
+public record CheckItem
 {
     public string? Id { get; set; }
 
