@@ -14,6 +14,11 @@ public class TaskService(
         return HandleSnoozedTaskAsync(taskActivity);
     }
 
+    public Task HandleCronAsync()
+    {
+        throw new NotImplementedException();
+    }
+
     private async Task HandleSnoozedTaskAsync(Domain.TaskActivityEvent taskActivity)
     {
         if(IsSnoozeableTask(taskActivity))
