@@ -6,7 +6,7 @@ public class TaskActivityEvent
 
     public string? Direction { get; set; }   
 
-    public Task? Task { get; set; }
+    public required Task Task { get; set; }
 
     public string? WebhookType { get; set; }
 

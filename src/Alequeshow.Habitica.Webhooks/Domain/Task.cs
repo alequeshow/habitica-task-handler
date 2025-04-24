@@ -14,6 +14,8 @@ public record Task
 
     public string? Attribute { get; set; }
 
+    public string? Notes { get; set; }
+
     public List<CheckItem>? Checklist { get; set; }
 
     public List<string>? Tags { get; set; }
@@ -48,6 +50,24 @@ public record Task
     public bool? Completed { get; set; }    
 
     public bool IsDaily() => string.Equals(Type, "daily", StringComparison.CurrentCultureIgnoreCase);
+
+    public bool IsDueToday()
+    {
+        var lastEntry = GetLastHistoryEntry();
+
+        if (lastEntry != null)
+        {
+            return 
+                lastEntry.IsDue == IsDue &&
+                lastEntry.Date.Date == DateTime.Today &&
+                IsDue == true &&
+                Completed == false;
+        }
+
+        return 
+            IsDue == true&&
+            Completed == false;
+    }
 
     public History? GetLastHistoryEntry(bool excludesToday = false)
     {

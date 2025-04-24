@@ -11,7 +11,7 @@ namespace Alequeshow.Habitica.Webhooks
         private readonly ILogger<TimedEventFunction> logger = logger;
 
         [Function("TimedEventFunction")]
-        public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo timer)
+        public async Task Run([TimerTrigger("%TIMED_FUNCTION_CRON%")] TimerInfo timer)
         {
             logger.LogInformation("Timed event function executed at: {Now}. Next execution: {next}", DateTime.UtcNow, timer.ScheduleStatus?.Next);
             
