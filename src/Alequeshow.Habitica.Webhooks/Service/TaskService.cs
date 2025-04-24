@@ -47,7 +47,7 @@ public class TaskService(
                     Type = "todo",
                     Completed = false,
                     Tags = task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
-                    Date = DateTime.Now.AddDays(1),
+                    Date = DateTime.UtcNow,
                     Checklist = task.Checklist?.Select(
                         item => item with 
                         { 
@@ -58,7 +58,7 @@ public class TaskService(
                         new Domain.Reminder
                         {
                             Id = Guid.NewGuid().ToString(),
-                            Time = DateTime.Now.Date.AddDays(1).AddHours(9),
+                            Time = DateTime.UtcNow.AddHours(8),
                         }
                     ],
                     Notes = "Daily Snoozed. Do it!!",
