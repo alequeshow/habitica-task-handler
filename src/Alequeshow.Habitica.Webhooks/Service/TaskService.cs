@@ -1,17 +1,30 @@
 using Alequeshow.Habitica.Webhooks.Service.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Alequeshow.Habitica.Webhooks.Service;
 
 public class TaskService(
         ILogger<TaskService> logger,
+        IOptions<TaskServiceOptions> options,
         IHabiticaApiService habiticaApi) : ITaskService
 {
     private const string SnoozeableTagId = "1557c38a-33f0-4391-8fc1-b3f01eb94906";
+    private readonly DateTime IsDueDateComparer = options?.Value.CompareDueTaskToYesterday == true
+        ? DateTime.Today.AddDays(-1)
+        : DateTime.Today;
+
+    private readonly DateTime FollowingDueDate = options?.Value.CompareDueTaskToYesterday == true
+        ? DateTime.Today
+        : DateTime.Today.AddDays(1);
 
     public Task HandleTaskActivityAsync(Domain.TaskActivityEvent taskActivity)
     {
-        return HandleSnoozedTaskAsync(taskActivity.Task);
+        // Method commented because turns out the webhook is not the best way to validate
+        // uncompleted tasks when cron runs and score them down.
+        //return HandleSnoozedTaskAsync(taskActivity.Task);
+
+        return Task.CompletedTask;
     }
 
     public async Task HandleCronAsync()
@@ -47,7 +60,7 @@ public class TaskService(
                     Type = "todo",
                     Completed = false,
                     Tags = task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
-                    Date = DateTime.UtcNow,
+                    Date = FollowingDueDate,
                     Checklist = task.Checklist?.Select(
                         item => item with 
                         { 
@@ -58,7 +71,7 @@ public class TaskService(
                         new Domain.Reminder
                         {
                             Id = Guid.NewGuid().ToString(),
-                            Time = DateTime.UtcNow.AddHours(8),
+                            Time = FollowingDueDate.AddHours(10),
                         }
                     ],
                     Notes = "Daily Snoozed. Do it!!",
@@ -82,11 +95,11 @@ public class TaskService(
         }
     }
 
-    private static bool IsSnoozeableTask(Domain.Task task)
+    private bool IsSnoozeableTask(Domain.Task task)
     {
         return 
             task.IsDaily() &&
-            task.IsDueToday() &&
+            task.IsDueInDate(IsDueDateComparer) &&
             (task.Tags?.Contains(SnoozeableTagId) == true);
     }
 }

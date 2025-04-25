@@ -51,17 +51,18 @@ public record Task
 
     public bool IsDaily() => string.Equals(Type, "daily", StringComparison.CurrentCultureIgnoreCase);
 
-    public bool IsDueToday()
+    public bool IsDueInDate(DateTime? date = null)
     {
-        var lastEntry = GetLastHistoryEntry();
+        var dateToCompare = date ?? DateTime.Today;
+        var lastEntry = GetLastHistoryEntry(dateToCompare);
 
         if (lastEntry != null)
         {
             return 
-                lastEntry.IsDue == IsDue &&
-                lastEntry.Date.Date == DateTime.Today &&
-                IsDue == true &&
-                Completed == false;
+                (lastEntry.IsDue == IsDue &&
+                    lastEntry.Date.Date == dateToCompare.Date) ||
+                (IsDue == true &&
+                    Completed == false);
         }
 
         return 
@@ -69,22 +70,17 @@ public record Task
             Completed == false;
     }
 
-    public History? GetLastHistoryEntry(bool excludesToday = false)
+    public History? GetLastHistoryEntry(DateTime? dateRefInclusive = null)
     {
+        var dateToCompare = dateRefInclusive ?? DateTime.Today;
+
         if (History == null || History.Count == 0)
         {
             return null;
         }
         
-        if (!excludesToday)
-        {
-            return History
-                .OrderByDescending(h => h.Date)
-                .FirstOrDefault();
-        }
-
         return History
-            .Where(h => h.Date.Date < DateTime.Today)
+            .Where(h => h.Date.Date <= dateToCompare.Date)
             .OrderByDescending(h => h.Date)
             .FirstOrDefault();
     }

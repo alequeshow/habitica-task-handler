@@ -1,3 +1,4 @@
+using Alequeshow.Habitica.Webhooks;
 using Alequeshow.Habitica.Webhooks.Service;
 using Alequeshow.Habitica.Webhooks.Service.Interfaces;
 using Microsoft.Azure.Functions.Worker;
@@ -19,6 +20,11 @@ builder.Configuration
     .AddUserSecrets<Program>();
 
 var configuration = builder.Configuration;
+
+builder.Services.Configure<TaskServiceOptions>(options =>
+{
+    options.CompareDueTaskToYesterday = bool.Parse(configuration["DUE_TASK_COMPARE_YESTERDAY"] ?? "false");
+});
 
 builder.Services.AddSingleton<ITaskService, TaskService>();
 builder.Services.AddRefitClient<IHabiticaApiService>()
