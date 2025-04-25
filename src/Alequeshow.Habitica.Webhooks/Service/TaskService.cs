@@ -1,74 +1,105 @@
 using Alequeshow.Habitica.Webhooks.Service.Interfaces;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Alequeshow.Habitica.Webhooks.Service;
 
 public class TaskService(
-        ILogger<TaskService> logger) : ITaskService
+        ILogger<TaskService> logger,
+        IOptions<TaskServiceOptions> options,
+        IHabiticaApiService habiticaApi) : ITaskService
 {
     private const string SnoozeableTagId = "1557c38a-33f0-4391-8fc1-b3f01eb94906";
+    private readonly DateTime IsDueDateComparer = options?.Value.CompareDueTaskToYesterday == true
+        ? DateTime.Today.AddDays(-1)
+        : DateTime.Today;
+
+    private readonly DateTime FollowingDueDate = options?.Value.CompareDueTaskToYesterday == true
+        ? DateTime.Today
+        : DateTime.Today.AddDays(1);
 
     public Task HandleTaskActivityAsync(Domain.TaskActivityEvent taskActivity)
     {
-        HandleSnoozedTaskAsync(taskActivity);
+        // Method commented because turns out the webhook is not the best way to validate
+        // uncompleted tasks when cron runs and score them down.
+        //return HandleSnoozedTaskAsync(taskActivity.Task);
 
         return Task.CompletedTask;
     }
 
-    private Task HandleSnoozedTaskAsync(Domain.TaskActivityEvent taskActivity)
+    public async Task HandleCronAsync()
     {
-        if(IsSnoozeableTask(taskActivity))
+        await HandleDailyTasks();
+    }
+
+    private async Task HandleDailyTasks()
+    {
+        var result = await habiticaApi.GetUserTasksAsync("dailys");
+        var dailies = result.Content;
+
+        if(dailies?.Data == null)
         {
-            var todoTask = taskActivity.Task! with
+            logger.LogWarning("No tasks found.");
+            return;
+        }
+
+        foreach(var task in dailies.Data)
+        {
+            await HandleSnoozedTaskAsync(task);
+        }
+    }
+
+    private async Task HandleSnoozedTaskAsync(Domain.Task task)
+    {
+        if(IsSnoozeableTask(task))
+        {
+            try
             {
-                Type = "todo",
-                Completed = false,
-                Tags = taskActivity.Task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
-                Date = DateTime.UtcNow,
-                Checklist = taskActivity.Task.Checklist?.Select(
-                    item => item with 
-                    { 
-                        Id = null
-                    }
-                ).ToList(),
-                Reminders = [
-                    new Domain.Reminder
-                    {
-                        Time = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day, 12, 0, 0),
-                    }
-                ],
-                Id = null,
-                Frequency = null,
-                Streak = null,
-                IsDue = null,
-                History = null,
-            };
-
-            logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask.ToString());
-
+                var todoTask = task! with
+                {
+                    Type = "todo",
+                    Completed = false,
+                    Tags = task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
+                    Date = FollowingDueDate,
+                    Checklist = task.Checklist?.Select(
+                        item => item with 
+                        { 
+                            Id = Guid.NewGuid().ToString(),
+                        }
+                    ).ToList(),
+                    Reminders = [
+                        new Domain.Reminder
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            Time = FollowingDueDate.AddHours(10),
+                        }
+                    ],
+                    Notes = "Daily Snoozed. Do it!!",
+                    Id = null,
+                    Frequency = null,
+                    Streak = null,
+                    IsDue = null,
+                    History = null,
+                };
+    
+                logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask);
+    
+                var result = await habiticaApi.CreateUserTasksAsync(todoTask);
+    
+                logger.LogInformation("Snoozed task created! {NewTask}", result.Content?.Data?.ToString());
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while handling Snoozed task. Task: {Task}", task.ToString());
+            }
         }
-
-        return Task.CompletedTask;
     }
 
-    private static bool IsSnoozeableTask(Domain.TaskActivityEvent taskActivity)
+    private bool IsSnoozeableTask(Domain.Task task)
     {
-        var lastEntry = taskActivity.Task?.GetLastHistoryEntry();
-
-        if(lastEntry == null)
-        {
-            return false;
-        }
-
-        var wasSkipped = lastEntry.IsDue == true && 
-            lastEntry.Completed == false &&
-            taskActivity.Task?.IsDue == true && 
-            taskActivity.Task?.Streak == 0 &&
-            taskActivity.Task?.Completed == false;
-
-        return taskActivity.IsUpdateEvent() &&
-            (taskActivity.Task?.IsDaily() == true) &&
-            (taskActivity.Task?.Tags?.Contains(SnoozeableTagId) == true) &&             
-            wasSkipped;                        
+        return 
+            task.IsDaily() &&
+            task.IsDueInDate(IsDueDateComparer) &&
+            (task.Tags?.Contains(SnoozeableTagId) == true);
     }
 }
