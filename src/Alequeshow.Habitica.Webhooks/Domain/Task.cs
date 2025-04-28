@@ -59,14 +59,15 @@ public record Task
         if (lastEntry != null)
         {
             return 
-                (lastEntry.IsDue == IsDue &&
+                (lastEntry.IsDue == true &&
+                    lastEntry.Completed == false &&
                     lastEntry.Date.Date == dateToCompare.Date) ||
                 (IsDue == true &&
                     Completed == false);
         }
 
         return 
-            IsDue == true&&
+            IsDue == true &&
             Completed == false;
     }
 
