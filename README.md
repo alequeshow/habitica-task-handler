@@ -28,7 +28,7 @@ In order to use this repo, you'll need:
 4. Configure your local.settings.json with the required settings for local development. Required environment variables to be added:
    - `HABITICA_URL`: The base URL for the habitica environment. Use `https://habitica.com` for production or any other for testing purposes
    - `HABITICA_USER_ID`: User ID Key you can aquire your from `https://habitica.com/user/settings/siteData` Site Data/User section
-   - `HABITICA_USER_TOKEN`: User token valu you can aquire from `https://habitica.com/user/settings/siteData` Site Data/API section
+   - `HABITICA_USER_TOKEN`: User token value you can acquire from `https://habitica.com/user/settings/siteData` Site Data/API section
    - `HABITICA_SNOOZE_TAG_ID`: The id of the tag you defined to the function identifies which daily-tasks to consider to create as to-do when due and not completed
       - See [Habitica API reference](https://habitica.com/apidoc/#api-Tag-GetTags)
    - We strongly suggest to manage sensitive data into [user-secres](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-9.0&tabs=linux#use-the-cli)  
