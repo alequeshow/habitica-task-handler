@@ -1,4 +1,6 @@
+using Alequeshow.Habitica.Webhooks.Helpers;
 using Alequeshow.Habitica.Webhooks.Service.Interfaces;
+
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -9,14 +11,15 @@ public class TaskService(
         IOptions<TaskServiceOptions> options,
         IHabiticaApiService habiticaApi) : ITaskService
 {
-    private const string SnoozeableTagId = "1557c38a-33f0-4391-8fc1-b3f01eb94906";
+    private readonly string SnoozeableTagId = options?.Value.SnoozeableTagId ?? string.Empty;
+
     private readonly DateTime IsDueDateComparer = options?.Value.CompareDueTaskToYesterday == true
         ? DateTime.Today.AddDays(-1)
         : DateTime.Today;
 
-    private readonly DateTime FollowingDueDate = options?.Value.CompareDueTaskToYesterday == true
-        ? DateTime.Today
-        : DateTime.Today.AddDays(1);
+    private DateTime FollowingDueDate => options?.Value.CompareDueTaskToYesterday == true
+            ? DateTime.Today.FromBrtToUtc()
+            : DateTime.Today.FromBrtToUtc().AddDays(1);
 
     public Task HandleTaskActivityAsync(Domain.TaskActivityEvent taskActivity)
     {
@@ -81,6 +84,11 @@ public class TaskService(
                     IsDue = null,
                     History = null,
                 };
+
+                todoTask.WriteNotes([
+                    $"Date-Comparer: {IsDueDateComparer}",
+                    $"Following-Due-Date: {FollowingDueDate}",                    
+                ]);
     
                 logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask);
     
