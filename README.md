@@ -1,6 +1,6 @@
-# Habitica Webhooks
+# Habitica Task Handlers
 
-This project contains Azure Functions that interact with Habitica's task management system. It includes an HTTP-triggered function for handling task events and a timer-triggered function for scheduled operations.
+This project contains Azure Functions that interact with Habitica's task management system. It includes an HTTP-triggered function (webhook) for handling task events and a timer-triggered function for scheduled operations.
 
 In order to use this repo, you'll need:
 
