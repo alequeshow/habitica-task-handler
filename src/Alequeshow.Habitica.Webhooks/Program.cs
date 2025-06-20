@@ -24,13 +24,14 @@ var configuration = builder.Configuration;
 builder.Services.Configure<TaskServiceOptions>(options =>
 {
     options.CompareDueTaskToYesterday = bool.Parse(configuration["DUE_TASK_COMPARE_YESTERDAY"] ?? "false");
+    options.SnoozeableTagId = configuration["HABITICA_SNOOZE_TAG_ID"];
 });
 
 builder.Services.AddSingleton<ITaskService, TaskService>();
 builder.Services.AddRefitClient<IHabiticaApiService>()
     .ConfigureHttpClient(httpClient => 
     {
-        httpClient.BaseAddress = new Uri(configuration["HABITICA_URL"]);
+        httpClient.BaseAddress = new Uri(configuration["HABITICA_URL"]!);
         httpClient.DefaultRequestHeaders.Add("x-api-user", configuration["HABITICA_USER_ID"]);
         httpClient.DefaultRequestHeaders.Add("x-api-key", configuration["HABITICA_USER_TOKEN"]);
     });

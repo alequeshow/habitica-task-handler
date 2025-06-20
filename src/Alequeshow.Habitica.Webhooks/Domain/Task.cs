@@ -14,6 +14,8 @@ public record Task
 
     public string? Attribute { get; set; }
 
+    public double Priority { get; set; }
+
     public string? Notes { get; set; }
 
     public List<CheckItem>? Checklist { get; set; }
@@ -59,14 +61,15 @@ public record Task
         if (lastEntry != null)
         {
             return 
-                (lastEntry.IsDue == IsDue &&
+                (lastEntry.IsDue == true &&
+                    lastEntry.Completed == false &&
                     lastEntry.Date.Date == dateToCompare.Date) ||
                 (IsDue == true &&
                     Completed == false);
         }
 
         return 
-            IsDue == true&&
+            IsDue == true &&
             Completed == false;
     }
 
@@ -83,6 +86,18 @@ public record Task
             .Where(h => h.Date.Date <= dateToCompare.Date)
             .OrderByDescending(h => h.Date)
             .FirstOrDefault();
+    }
+
+    public void WriteNotes(params string[] notes)
+    {
+        if (notes == null || notes.Length == 0)
+        {
+            return;
+        }
+
+        Notes = string.IsNullOrEmpty(Notes) 
+            ? string.Join("\n", notes) 
+            : $"{Notes}\n{string.Join("\n", notes)}";
     }
 
     public override string ToString()
