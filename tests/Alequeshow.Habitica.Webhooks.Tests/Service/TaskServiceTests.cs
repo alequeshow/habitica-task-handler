@@ -132,37 +132,6 @@ public class TaskServiceTestsSimplified
         _mockHabiticaApi.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
     }
 
-    private DomainTask CreateTestTask(string type, string text, List<string> tags, bool isDue = true)
-    {
-        var task = new DomainTask
-        {
-            Id = Guid.NewGuid().ToString(),
-            Type = type,
-            Text = text,
-            Tags = tags,
-            IsDue = isDue,
-            Completed = false,
-            Value = 1.0,
-            Priority = 1.0
-        };
-
-        // Add history for daily tasks to satisfy IsDueInDate method
-        if (type == "daily" && isDue)
-        {
-            task.History = new List<History>
-            {
-                new History
-                {
-                    Date = DateTime.Today,
-                    IsDue = true,
-                    Completed = false
-                }
-            };
-        }
-
-        return task;
-    }
-
     [Theory]
     [InlineData("test-tag-id", false)]
     [InlineData("different-tag", true)]
@@ -269,5 +238,36 @@ public class TaskServiceTestsSimplified
         
         // Verify HandleCronAsync called HandleDailyTasks which calls GetUserTasksAsync with "dailys"
         _mockHabiticaApi.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
+    }
+
+    private DomainTask CreateTestTask(string type, string text, List<string> tags, bool isDue = true)
+    {
+        var task = new DomainTask
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = type,
+            Text = text,
+            Tags = tags,
+            IsDue = isDue,
+            Completed = false,
+            Value = 1.0,
+            Priority = 1.0
+        };
+
+        // Add history for daily tasks to satisfy IsDueInDate method
+        if (type == "daily" && isDue)
+        {
+            task.History = new List<History>
+            {
+                new History
+                {
+                    Date = DateTime.Today,
+                    IsDue = true,
+                    Completed = false
+                }
+            };
+        }
+
+        return task;
     }
 }
