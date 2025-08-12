@@ -6,7 +6,7 @@ using Refit;
 namespace Alequeshow.Habitica.Webhooks.Service;
 
 public class HabiticaApiService(
-        ILogger<TaskService> logger,
+        ILogger<HabiticaApiService> logger,
         IHabiticaApiClient habiticaApi) : IHabiticaApiService
 {
     private readonly JsonSerializerOptions JsonSerializerOptions = new()
@@ -54,7 +54,7 @@ public class HabiticaApiService(
             }
             else
             {
-                logger.LogError("API call failed with unkown error");
+                logger.LogError("API call failed with unknown error");
             }            
         }
         catch (Exception ex)
