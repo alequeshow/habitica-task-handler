@@ -54,7 +54,7 @@ public class HabiticaApiService(
             }
             else
             {
-                logger.LogError("API call failed with unkown error");
+                logger.LogError("API call failed with unknown error");
             }            
         }
         catch (Exception ex)
