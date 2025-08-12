@@ -14,14 +14,14 @@ namespace Alequeshow.Habitica.Webhooks.Tests.Service;
 public class TaskServiceTestsSimplified
 {
     private readonly Mock<ILogger<TaskService>> _mockLogger;
-    private readonly Mock<IHabiticaApiService> _mockHabiticaApi;
+    private readonly Mock<IHabiticaApiService> _mockHabiticaApiService;
     private readonly Mock<IOptions<TaskServiceOptions>> _mockOptions;
     private readonly TaskServiceOptions _defaultOptions;
 
     public TaskServiceTestsSimplified()
     {
         _mockLogger = new Mock<ILogger<TaskService>>();
-        _mockHabiticaApi = new Mock<IHabiticaApiService>();
+        _mockHabiticaApiService = new Mock<IHabiticaApiService>();
         _mockOptions = new Mock<IOptions<TaskServiceOptions>>();
         
         _defaultOptions = new TaskServiceOptions
@@ -37,7 +37,7 @@ public class TaskServiceTestsSimplified
     public void Constructor_WithValidParameters_ShouldInitializeCorrectly()
     {
         // Arrange & Act
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -52,7 +52,7 @@ public class TaskServiceTestsSimplified
         mockOptions.Setup(o => o.Value).Returns(emptyOptions);
 
         // Act
-        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApiService.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -71,7 +71,7 @@ public class TaskServiceTestsSimplified
         mockOptions.Setup(o => o.Value).Returns(options);
 
         // Act
-        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApiService.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -81,7 +81,7 @@ public class TaskServiceTestsSimplified
     public async Task HandleTaskActivityAsync_ShouldCompleteSuccessfully()
     {
         // Arrange
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
         var taskActivity = new TaskActivityEvent
         {
             Type = "activity",
@@ -99,29 +99,29 @@ public class TaskServiceTestsSimplified
     public async Task HandleCronAsync_ShouldCallGetUserTasksAsync()
     {
         // Arrange
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
         
         // Setup the mock to return a completed task - we don't need to validate the return value details
         // Since we can't easily mock ApiResponse, we'll test by verifying the API call is made
         // and allowing the method to throw if needed
-        _mockHabiticaApi.Setup(x => x.GetUserTasksAsync("dailys"))
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ThrowsAsync(new Exception("Expected API call"));
 
         // Act & Assert - We expect the method to call the API and potentially throw
         var exception = await Assert.ThrowsAsync<Exception>(() => service.HandleCronAsync());
         
         // Verify the API was called
-        _mockHabiticaApi.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
     }
 
     [Fact]
     public async Task HandleCronAsync_WhenApiThrowsException_ShouldPropagateException()
     {
         // Arrange
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
         
         // Setup the mock to throw an exception
-        _mockHabiticaApi.Setup(x => x.GetUserTasksAsync("dailys"))
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ThrowsAsync(new Exception("API Error"));
 
         // Act & Assert - Exception should propagate up
@@ -129,7 +129,7 @@ public class TaskServiceTestsSimplified
         Assert.Equal("API Error", exception.Message);
 
         // Verify the API was called
-        _mockHabiticaApi.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
     }
 
     [Theory]
@@ -148,7 +148,7 @@ public class TaskServiceTestsSimplified
         mockOptions.Setup(o => o.Value).Returns(options);
 
         // Act
-        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApiService.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -158,7 +158,7 @@ public class TaskServiceTestsSimplified
     public async Task HandleTaskActivityAsync_WithDifferentTaskTypes_ShouldCompleteSuccessfully()
     {
         // Arrange
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
         
         var testCases = new[]
         {
@@ -197,7 +197,7 @@ public class TaskServiceTestsSimplified
         mockOptions.Setup(o => o.Value).Returns(options);
 
         // Act
-        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, mockOptions.Object, _mockHabiticaApiService.Object);
 
         // Assert
         Assert.NotNull(service);
@@ -208,10 +208,10 @@ public class TaskServiceTestsSimplified
     public async Task TaskService_ErrorHandling_ShouldPropagateApiExceptions()
     {
         // Arrange
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
         var expectedException = new InvalidOperationException("API is unavailable");
         
-        _mockHabiticaApi.Setup(x => x.GetUserTasksAsync("dailys"))
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ThrowsAsync(expectedException);
 
         // Act & Assert
@@ -219,25 +219,25 @@ public class TaskServiceTestsSimplified
         Assert.Equal("API is unavailable", exception.Message);
         
         // Verify the API was called
-        _mockHabiticaApi.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
     }
 
     [Fact]
     public async Task HandleCronAsync_ShouldCallHandleDailyTasks()
     {
         // Arrange
-        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApi.Object);
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
         
         // We can't easily mock the return value, so we'll test that it makes the expected call
         // and verify that HandleCronAsync calls HandleDailyTasks (which calls GetUserTasksAsync)
-        _mockHabiticaApi.Setup(x => x.GetUserTasksAsync("dailys"))
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ThrowsAsync(new Exception("Expected call"));
 
         // Act & Assert
         await Assert.ThrowsAsync<Exception>(() => service.HandleCronAsync());
         
         // Verify HandleCronAsync called HandleDailyTasks which calls GetUserTasksAsync with "dailys"
-        _mockHabiticaApi.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("dailys"), Times.Once);
     }
 
     private DomainTask CreateTestTask(string type, string text, List<string> tags, bool isDue = true)

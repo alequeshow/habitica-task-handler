@@ -9,7 +9,7 @@ namespace Alequeshow.Habitica.Webhooks.Service;
 public class TaskService(
         ILogger<TaskService> logger,
         IOptions<TaskServiceOptions> options,
-        IHabiticaApiService habiticaApi) : ITaskService
+        IHabiticaApiService habiticaApiService) : ITaskService
 {
     private readonly string SnoozeableTagId = options?.Value.SnoozeableTagId ?? string.Empty;
 
@@ -37,16 +37,15 @@ public class TaskService(
 
     private async Task HandleDailyTasks()
     {
-        var result = await habiticaApi.GetUserTasksAsync("dailys");
-        var dailies = result.Content;
+        var dailies = await habiticaApiService.GetUserTasksAsync("dailys");    
 
-        if(dailies?.Data == null)
+        if(!dailies.Any())
         {
             logger.LogWarning("No tasks found.");
             return;
         }
 
-        foreach(var task in dailies.Data)
+        foreach(var task in dailies)
         {
             await HandleSnoozedTaskAsync(task);
         }
@@ -64,7 +63,7 @@ public class TaskService(
                     Completed = false,
                     Tags = task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
                     Date = FollowingDueDate,
-                    Checklist = task.Checklist?.Select(
+                    Checklist = task.Checklist?.Where(c => !c.Completed).Select(
                         item => item with 
                         { 
                             Id = Guid.NewGuid().ToString(),
@@ -85,16 +84,11 @@ public class TaskService(
                     History = null,
                 };
 
-                todoTask.WriteNotes([
-                    $"Date-Comparer: {IsDueDateComparer}",
-                    $"Following-Due-Date: {FollowingDueDate}",                    
-                ]);
-    
                 logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask);
     
-                var result = await habiticaApi.CreateUserTasksAsync(todoTask);
+                var result = await habiticaApiService.CreateUserTasksAsync(todoTask);
     
-                logger.LogInformation("Snoozed task created! {NewTask}", result.Content?.Data?.ToString());
+                logger.LogInformation("Snoozed task created! {NewTask}", result.ToString());
             }
             catch (Exception ex)
             {
