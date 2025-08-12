@@ -6,7 +6,7 @@ using Refit;
 namespace Alequeshow.Habitica.Webhooks.Service;
 
 public class HabiticaApiService(
-        ILogger<TaskService> logger,
+        ILogger<HabiticaApiService> logger,
         IHabiticaApiClient habiticaApi) : IHabiticaApiService
 {
     private readonly JsonSerializerOptions JsonSerializerOptions = new()
