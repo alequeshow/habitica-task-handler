@@ -28,10 +28,13 @@ builder.Services.Configure<TaskServiceOptions>(options =>
 });
 
 builder.Services.AddSingleton<ITaskService, TaskService>();
-builder.Services.AddRefitClient<IHabiticaApiService>()
+builder.Services.AddSingleton<IHabiticaApiService, HabiticaApiService>();
+
+builder.Services.AddRefitClient<IHabiticaApiClient>()
     .ConfigureHttpClient(httpClient => 
     {
         httpClient.BaseAddress = new Uri(configuration["HABITICA_URL"]!);
+        httpClient.DefaultRequestHeaders.Add("x-client", $"{configuration["HABITICA_USER_ID"]}-task-snoozer");
         httpClient.DefaultRequestHeaders.Add("x-api-user", configuration["HABITICA_USER_ID"]);
         httpClient.DefaultRequestHeaders.Add("x-api-key", configuration["HABITICA_USER_TOKEN"]);
     });

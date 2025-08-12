@@ -37,14 +37,49 @@ In order to use this repo, you'll need:
       - My task is configured to run every 2AM: `0 0 2 * * *`
    - `DUE_TASK_COMPARE_YESTERDAY` [Optional]: Since I'm in Brazil and there is a timezone difference to UTC (3h), The time I set the function to run is to it runs in my scope at 11PM.
       - This way its needed to consider tasks from the past days instead of today, this flags indicates that.
-5. Run the Azure Functions locally to test the functionality.
+
+### Installing Azure Functions Core Tools in Codespace
+
+If you're working in a GitHub Codespace or Ubuntu environment, follow these steps to install Azure Functions Core Tools:
+
+1. **Add Microsoft's GPG key and repository:**
+```bash
+curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
+sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
+```
+
+2. **Add Microsoft's package repository:**
+```bash
+sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-$(lsb_release -cs)-prod $(lsb_release -cs) main" > /etc/apt/sources.list.d/dotnetdev.list'
+```
+
+3. **Update package lists:**
+```bash
+sudo apt update
+```
+
+4. **Install Azure Functions Core Tools v4:**
+```bash
+sudo apt install azure-functions-core-tools-4
+```
+
+5. **Verify installation:**
+```bash
+func --version
+```
+
+6. **Install Azurite for local development:**
+```bash
+npm install -g azurite
+```
+
+7. Run the Azure Functions locally to test the functionality.
    - Run azurie and start the function:
 ```
 azurite
 cd src/Alequeshow.Habitica.Webhooks
 funct start
-```
-   
+```   
 
 ## Snooze Task Handler
 
