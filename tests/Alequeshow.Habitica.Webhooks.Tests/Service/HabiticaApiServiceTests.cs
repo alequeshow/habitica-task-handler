@@ -14,13 +14,13 @@ namespace Alequeshow.Habitica.Webhooks.Tests.Service;
 
 public class HabiticaApiServiceTests
 {
-    private readonly Mock<ILogger<TaskService>> _mockLogger;
+    private readonly Mock<ILogger<HabiticaApiService>> _mockLogger;
     private readonly Mock<IHabiticaApiClient> _mockHabiticaApiClient;
     private readonly HabiticaApiService _service;
 
     public HabiticaApiServiceTests()
     {
-        _mockLogger = new Mock<ILogger<TaskService>>();
+        _mockLogger = new Mock<ILogger<HabiticaApiService>>();
         _mockHabiticaApiClient = new Mock<IHabiticaApiClient>();
         _service = new HabiticaApiService(_mockLogger.Object, _mockHabiticaApiClient.Object);
     }
@@ -398,7 +398,7 @@ public class HabiticaApiServiceTests
         Assert.Equal("Failed to create user task", exception.Message);
 
         // Verify unknown error logging
-        VerifyLoggerCalled(LogLevel.Error, "API call failed with unkown error");
+        VerifyLoggerCalled(LogLevel.Error, "API call failed with unknown error");
     }
 
     private void VerifyLoggerCalled(LogLevel logLevel, string message)
