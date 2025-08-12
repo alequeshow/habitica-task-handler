@@ -25,8 +25,6 @@ public class HabiticaApiServiceTests
         _service = new HabiticaApiService(_mockLogger.Object, _mockHabiticaApiClient.Object);
     }
 
-    #region CreateUserTasksAsync Tests
-
     [Fact]
     public async Task CreateUserTasksAsync_WithValidTask_ReturnsTask()
     {
@@ -56,7 +54,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ThrowsAsync(new HttpRequestException("Network error"));
@@ -64,7 +62,7 @@ public class HabiticaApiServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _service.CreateUserTasksAsync(inputTask));
         Assert.Equal("Failed to create user task", exception.Message);
-        
+
         // Verify logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -75,7 +73,7 @@ public class HabiticaApiServiceTests
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
         var unsuccessfulResponse = CreateUnsuccessfulApiResponse<DomainTask>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ReturnsAsync(unsuccessfulResponse);
@@ -91,7 +89,7 @@ public class HabiticaApiServiceTests
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
         var nullContentResponse = CreateNullContentApiResponse<DomainTask>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ReturnsAsync(nullContentResponse);
@@ -106,7 +104,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ThrowsAsync(new HttpRequestException("Invalid task data"));
@@ -114,7 +112,7 @@ public class HabiticaApiServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _service.CreateUserTasksAsync(inputTask));
         Assert.Equal("Failed to create user task", exception.Message);
-        
+
         // Verify error logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -124,7 +122,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ThrowsAsync(new InvalidOperationException("HTTP 400 Bad Request"));
@@ -132,7 +130,7 @@ public class HabiticaApiServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _service.CreateUserTasksAsync(inputTask));
         Assert.Equal("Failed to create user task", exception.Message);
-        
+
         // Verify error logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -142,7 +140,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ReturnsAsync((ApiResponse<HabiticaApiResponse<DomainTask>>)null!);
@@ -150,14 +148,10 @@ public class HabiticaApiServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _service.CreateUserTasksAsync(inputTask));
         Assert.Equal("Failed to create user task", exception.Message);
-        
+
         // Verify logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
-
-    #endregion
-
-    #region GetUserTasksAsync Tests
 
     [Fact]
     public async Task GetUserTasksAsync_WithValidType_ReturnsTasks()
@@ -193,7 +187,7 @@ public class HabiticaApiServiceTests
         var taskType = "todos";
         var emptyTasks = new List<DomainTask>();
         var successResponse = CreateSuccessfulApiResponse(emptyTasks);
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ReturnsAsync(successResponse);
@@ -212,7 +206,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var taskType = "habits";
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ThrowsAsync(new HttpRequestException("Network error"));
@@ -223,7 +217,7 @@ public class HabiticaApiServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-        
+
         // Verify logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -234,7 +228,7 @@ public class HabiticaApiServiceTests
         // Arrange
         var taskType = "rewards";
         var unsuccessfulResponse = CreateUnsuccessfulApiResponse<List<DomainTask>>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ReturnsAsync(unsuccessfulResponse);
@@ -253,7 +247,7 @@ public class HabiticaApiServiceTests
         // Arrange
         var taskType = "dailys";
         var nullContentResponse = CreateNullContentApiResponse<List<DomainTask>>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ReturnsAsync(nullContentResponse);
@@ -271,7 +265,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var taskType = "dailys";
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ThrowsAsync(new UnauthorizedAccessException("User not authorized"));
@@ -282,7 +276,7 @@ public class HabiticaApiServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-        
+
         // Verify error logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -292,7 +286,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var taskType = "dailys";
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ThrowsAsync(new HttpRequestException("HTTP 500 Internal Server Error"));
@@ -303,7 +297,7 @@ public class HabiticaApiServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-        
+
         // Verify error logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -313,7 +307,7 @@ public class HabiticaApiServiceTests
     {
         // Arrange
         var taskType = "dailys";
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ReturnsAsync((ApiResponse<HabiticaApiResponse<List<DomainTask>>>)null!);
@@ -324,7 +318,7 @@ public class HabiticaApiServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Empty(result);
-        
+
         // Verify logging
         VerifyLoggerCalled(LogLevel.Error, "Exception occurred during API call");
     }
@@ -335,7 +329,7 @@ public class HabiticaApiServiceTests
         // Arrange
         var taskType = "dailys";
         var responseWithNullData = CreateApiResponseWithNullData<List<DomainTask>>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.GetUserTasksAsync(taskType))
             .ReturnsAsync(responseWithNullData);
@@ -348,17 +342,13 @@ public class HabiticaApiServiceTests
         Assert.Empty(result);
     }
 
-    #endregion
-
-    #region Edge Cases and Error Handling
-
     [Fact]
     public async Task CreateUserTasksAsync_WhenApiReturnsNullDataInSuccessResponse_ThrowsException()
     {
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
         var responseWithNullData = CreateApiResponseWithNullData<DomainTask>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ReturnsAsync(responseWithNullData);
@@ -398,7 +388,7 @@ public class HabiticaApiServiceTests
         // Arrange
         var inputTask = CreateTestTask("daily", "Test Task");
         var responseWithNoContentAndNoError = CreateApiResponseWithNoContentAndNoError<DomainTask>();
-        
+
         _mockHabiticaApiClient
             .Setup(x => x.CreateUserTasksAsync(inputTask))
             .ReturnsAsync(responseWithNoContentAndNoError);
@@ -406,85 +396,9 @@ public class HabiticaApiServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<Exception>(() => _service.CreateUserTasksAsync(inputTask));
         Assert.Equal("Failed to create user task", exception.Message);
-        
+
         // Verify unknown error logging
         VerifyLoggerCalled(LogLevel.Error, "API call failed with unkown error");
-    }
-
-    #endregion
-
-    #region Helper Methods
-
-    private DomainTask CreateTestTask(string type, string text)
-    {
-        return new DomainTask
-        {
-            Id = Guid.NewGuid().ToString(),
-            Type = type,
-            Text = text,
-            Value = 1.0,
-            Priority = 1.0,
-            Completed = false
-        };
-    }
-
-    private ApiResponse<HabiticaApiResponse<T>> CreateSuccessfulApiResponse<T>(T data)
-    {
-        var content = new HabiticaApiResponse<T>
-        {
-            Success = true,
-            Data = data
-        };
-
-        return new ApiResponse<HabiticaApiResponse<T>>(
-            new HttpResponseMessage(HttpStatusCode.OK),
-            content,
-            new RefitSettings());
-    }
-
-    private ApiResponse<HabiticaApiResponse<T>> CreateUnsuccessfulApiResponse<T>()
-    {
-        var content = new HabiticaApiResponse<T>
-        {
-            Success = false,
-            Data = default
-        };
-
-        return new ApiResponse<HabiticaApiResponse<T>>(
-            new HttpResponseMessage(HttpStatusCode.BadRequest),
-            content,
-            new RefitSettings());
-    }
-
-    private ApiResponse<HabiticaApiResponse<T>> CreateNullContentApiResponse<T>()
-    {
-        return new ApiResponse<HabiticaApiResponse<T>>(
-            new HttpResponseMessage(HttpStatusCode.OK),
-            null,
-            new RefitSettings());
-    }
-
-    private ApiResponse<HabiticaApiResponse<T>> CreateApiResponseWithNullData<T>()
-    {
-        var content = new HabiticaApiResponse<T>
-        {
-            Success = true,
-            Data = default
-        };
-
-        return new ApiResponse<HabiticaApiResponse<T>>(
-            new HttpResponseMessage(HttpStatusCode.OK),
-            content,
-            new RefitSettings());
-    }
-
-    private ApiResponse<HabiticaApiResponse<T>> CreateApiResponseWithNoContentAndNoError<T>()
-    {
-        return new ApiResponse<HabiticaApiResponse<T>>(
-            new HttpResponseMessage(HttpStatusCode.OK),
-            null,
-            new RefitSettings(),
-            null);
     }
 
     private void VerifyLoggerCalled(LogLevel logLevel, string message)
@@ -499,5 +413,75 @@ public class HabiticaApiServiceTests
             Times.AtLeastOnce);
     }
 
-    #endregion
+    private static DomainTask CreateTestTask(string type, string text)
+    {
+        return new DomainTask
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = type,
+            Text = text,
+            Value = 1.0,
+            Priority = 1.0,
+            Completed = false
+        };
+    }
+
+    private static ApiResponse<HabiticaApiResponse<T>> CreateSuccessfulApiResponse<T>(T data)
+    {
+        var content = new HabiticaApiResponse<T>
+        {
+            Success = true,
+            Data = data
+        };
+
+        return new ApiResponse<HabiticaApiResponse<T>>(
+            new HttpResponseMessage(HttpStatusCode.OK),
+            content,
+            new RefitSettings());
+    }
+
+    private static ApiResponse<HabiticaApiResponse<T>> CreateUnsuccessfulApiResponse<T>()
+    {
+        var content = new HabiticaApiResponse<T>
+        {
+            Success = false,
+            Data = default
+        };
+
+        return new ApiResponse<HabiticaApiResponse<T>>(
+            new HttpResponseMessage(HttpStatusCode.BadRequest),
+            content,
+            new RefitSettings());
+    }
+
+    private static ApiResponse<HabiticaApiResponse<T>> CreateNullContentApiResponse<T>()
+    {
+        return new ApiResponse<HabiticaApiResponse<T>>(
+            new HttpResponseMessage(HttpStatusCode.OK),
+            null,
+            new RefitSettings());
+    }
+
+    private static ApiResponse<HabiticaApiResponse<T>> CreateApiResponseWithNullData<T>()
+    {
+        var content = new HabiticaApiResponse<T>
+        {
+            Success = true,
+            Data = default
+        };
+
+        return new ApiResponse<HabiticaApiResponse<T>>(
+            new HttpResponseMessage(HttpStatusCode.OK),
+            content,
+            new RefitSettings());
+    }
+
+    private static ApiResponse<HabiticaApiResponse<T>> CreateApiResponseWithNoContentAndNoError<T>()
+    {
+        return new ApiResponse<HabiticaApiResponse<T>>(
+            new HttpResponseMessage(HttpStatusCode.OK),
+            null,
+            new RefitSettings(),
+            null);
+    }
 }
