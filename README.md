@@ -19,6 +19,23 @@ In order to use this repo, you'll need:
 
 - **local.settings.json**: Local development settings, including connection strings and application settings. Not versioned (handle your own for security reasons 😉)
 
+## Snooze Task Handler
+
+The main motivation for this project is to give Habitica the ability to create a to-do task for dailies that weren't completed and have a need to follow-up. 
+
+Example:
+I have a weekly/montly task that there's no harm if I do it one, two or even few days later. As long as I do it eventually.
+Let's say I want to do my personal financial review monthly every 28th day of the month. However in that particular day I was travelling or had a busy day and couldn't even look at it. It's something I can do in the following days if I have the proper tracking.
+Because Habitica will hide this task when I review pending tasks in the day after, it'd be nice to have it replicated as a to-do for the next day.
+
+To achieve it, the `TimedEventFunction` can be configured to run in a specific time of the day to ensure eligible due-and-unfinished dailies will be replicated as a to-do task. 
+My function is configured to run everyday at 11pm. This time I know I'll hardly do any pending tasks because I'll be probably asleep.
+
+To turn tasks eligible you need to set a proper tag for it, grabs its id and store in the `HABITICA_SNOOZE_TAG_ID` environment variable. My tag I named `SnoozeTask` and set for whatever task I want to be tracked
+
+### Next steps
+In future I'll extend the snooze task handler to deal with Habits that had little to no score given its periodiocity (from weekly on just to avoid a chaotic to-do list)
+
 ## Setup Instructions
 
 1. Clone the repository to your local machine.
@@ -37,6 +54,24 @@ In order to use this repo, you'll need:
       - My task is configured to run every 2AM: `0 0 2 * * *`
    - `DUE_TASK_COMPARE_YESTERDAY` [Optional]: Since I'm in Brazil and there is a timezone difference to UTC (3h), The time I set the function to run is to it runs in my scope at 11PM.
       - This way its needed to consider tasks from the past days instead of today, this flags indicates that.
+
+local.settings.json structuture:
+```
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "HABITICA_URL": "https://habitica.com",
+    "HABITICA_USER_ID": "[you-habitica-user-id]",
+    "HABITICA_USER_TOKEN": "[you-habitica-user-token]",
+    "HABITICA_SNOOZE_TAG_ID": "[you-habitica-tag-id-to-be-tracked]",
+    "TIMED_FUNCTION_CRON": "0 */15 * * * *",
+    "DUE_TASK_COMPARE_YESTERDAY": "false"
+  }
+}
+
+```
 
 ### Installing Azure Functions Core Tools in Codespace
 
@@ -79,21 +114,4 @@ npm install -g azurite
 azurite
 cd src/Alequeshow.Habitica.Webhooks
 funct start
-```   
-
-## Snooze Task Handler
-
-The main motivation for this project is to give Habitica the ability to create a to-do task for dailies that weren't completed and have a need to follow-up. 
-
-Example:
-I have a weekly/montly task that there's no harm if I do it one, two or even few days later. As long as I do it eventually.
-Let's say I want to do my personal financial review monthly every 28th day of the month. However in that particular day I was travelling or had a busy day and couldn't even look at it. It's something I can do in the following days if I have the proper tracking.
-Because Habitica will hide this task when I review pending tasks in the day after, it'd be nice to have it replicated as a to-do for the next day.
-
-To achieve it, the `TimedEventFunction` can be configured to run in a specific time of the day to ensure eligible due-and-unfinished dailies will be replicated as a to-do task. 
-My function is configured to run everyday at 11pm. This time I know I'll hardly do any pending tasks because I'll be probably asleep.
-
-To turn tasks eligible you need to set a proper tag for it, grabs its id and store in the `HABITICA_SNOOZE_TAG_ID` environment variable. My tag I named `SnoozeTask` and set for whatever task I want to be tracked
-
-### Next steps
-In future I'll extend the snooze task handler to deal with Habits that had little to no score given its periodiocity (from weekly on just to avoid a chaotic to-do list)
+```
