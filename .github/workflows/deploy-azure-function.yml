@@ -41,7 +41,11 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Install Azure CLI
-      uses: azure/setup-cli@v2
+      uses: azure/CLI@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          echo "Azure CLI installed successfully"
 
     - name: Install Azure Functions Core Tools
       run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
