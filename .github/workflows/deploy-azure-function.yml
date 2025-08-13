@@ -48,7 +48,10 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          echo "Azure CLI installed successfully"
+          echo "Azure CLI Version:"
+          az --version
+          echo "Environment Variables:"
+          env | grep -E "(AZURE|GITHUB)" | sort
 
     - name: Install Azure Functions Core Tools
       run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
@@ -59,6 +62,13 @@ jobs:
         echo "GitHub Token Available: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
         echo "Repository: $GITHUB_REPOSITORY"
         echo "Ref: $GITHUB_REF"
+        echo "=== Fetching and Inspecting JWT Token ==="
+        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+        echo "Token acquired successfully"
+        echo "=== JWT Header ==="
+        echo $TOKEN | cut -d. -f1 | base64 -d 2>/dev/null | jq . || echo "Could not decode header"
+        echo "=== JWT Payload ==="
+        echo $TOKEN | cut -d. -f2 | base64 -d 2>/dev/null | jq . || echo "Could not decode payload"
 
     - name: Azure Login
       uses: azure/login@v2
@@ -80,10 +90,6 @@ jobs:
       if: failure()
       run: |
         echo "=== Azure Login Failed - Debug Information ==="
-        echo "Azure CLI Version:"
-        az --version
-        echo "Environment Variables:"
-        env | grep -E "(AZURE|GITHUB)" | sort
         echo "Manual login attempt with verbose output:"
         az login --service-principal \
           --username "${{ secrets.AZURE_CLIENT_ID }}" \
