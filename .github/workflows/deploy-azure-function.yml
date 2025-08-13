@@ -49,74 +49,31 @@ jobs:
         azcliversion: latest
         inlineScript: |
           echo "Azure CLI Version:"
-          az --version
-          echo "Environment Variables:"
-          env | grep -E "(AZURE|GITHUB)" | sort
+          az --version          
 
     - name: Install Azure Functions Core Tools
       run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
 
-    - name: Debug OIDC Token
-      run: |
-        echo "GitHub Token Endpoint: $ACTIONS_ID_TOKEN_REQUEST_URL"
-        echo "GitHub Token Available: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-        echo "Repository: $GITHUB_REPOSITORY"
-        echo "Ref: $GITHUB_REF"
-        echo "=== Fetching and Inspecting JWT Token ==="
-        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
-        echo "Token acquired successfully"
-        echo "=== JWT Header ==="
-        echo $TOKEN | cut -d. -f1 | base64 -d 2>/dev/null | jq . || echo "Could not decode header"
-        echo "=== JWT Payload ==="
-        echo $TOKEN | cut -d. -f2 | base64 -d 2>/dev/null | jq . || echo "Could not decode payload"
-
     - name: Azure Login
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-      env:
-        AZURE_CLI_DEBUG: true
-
-    - name: Test Azure Login Success
-      if: success()
       run: |
-        echo "=== Azure Login Successful ==="
+        echo "=== Manual OIDC Login ==="
+        # Get OIDC token from GitHub
+        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+        
+        # Login using Azure CLI with the OIDC token
+        az login --service-principal \
+          --username "${{ secrets.AZURE_CLIENT_ID }}" \
+          --federated-token "$TOKEN" \
+          --tenant "${{ secrets.AZURE_TENANT_ID }}"
+        
+        # Set subscription
+        az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
+    - name: Verify Azure Login Success
+      run: |
+        echo "=== Verifying Azure Account ==="
         az account show --output table
         az account list --output table
-
-    - name: Debug Azure Login Failure
-      if: failure()
-      run: |
-        echo "=== Azure Login Failed - Debug Information ==="
-        echo "=== Step 1: Check OIDC Token Acquisition ==="
-        TOKEN_RESPONSE=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange")
-        echo "Token response status: $?"
-        echo "Token response (first 200 chars): $(echo "$TOKEN_RESPONSE" | head -c 200)"
-        
-        TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r .value 2>/dev/null)
-        if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
-          echo "❌ OIDC token acquisition failed"
-          echo "Full response: $TOKEN_RESPONSE"
-        else
-          echo "✅ OIDC token acquired successfully"
-          echo "=== Step 2: Decode JWT token to verify claims ==="
-          echo "JWT Header:"
-          echo "$TOKEN" | cut -d. -f1 | base64 -d 2>/dev/null | jq . || echo "Could not decode header"
-          echo "JWT Payload:"
-          echo "$TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null | jq . || echo "Could not decode payload"
-          
-          echo "=== Step 3: Test Azure AD token exchange directly ==="
-          curl -X POST "https://login.microsoftonline.com/${{ secrets.AZURE_TENANT_ID }}/oauth2/v2.0/token" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "client_id=${{ secrets.AZURE_CLIENT_ID }}" \
-            -d "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
-            -d "client_assertion=$TOKEN" \
-            -d "scope=https://management.azure.com/.default" \
-            -d "grant_type=client_credentials" \
-            --max-time 30 -v
-        fi
 
     - name: Build solution for deployment
       run: dotnet build --configuration Release
