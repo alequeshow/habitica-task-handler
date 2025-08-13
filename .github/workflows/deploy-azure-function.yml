@@ -43,54 +43,20 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Setup Azure CLI Environment
-      run: |
-        # Use a writable directory for Azure CLI config
-        mkdir -p $GITHUB_WORKSPACE/.azure
-        
-        # Set Azure CLI to use our writable directory
-        echo "AZURE_CONFIG_DIR=$GITHUB_WORKSPACE/.azure" >> $GITHUB_ENV
-        
-        # Disable Azure CLI telemetry and version check
-        echo "AZURE_CORE_COLLECT_TELEMETRY=false" >> $GITHUB_ENV
-        echo "AZURE_CORE_NO_COLOR=true" >> $GITHUB_ENV
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Install Azure CLI
       uses: azure/CLI@v2
       with:
         azcliversion: latest
         inlineScript: |
-          echo "Azure CLI Version:"
-          az --version          
+          az account show
 
     - name: Install Azure Functions Core Tools
       run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
-
-    - name: Azure Login
-      env:
-        AZURE_CORE_COLLECT_TELEMETRY: false
-        AZURE_CORE_NO_COLOR: true
-      run: |
-        echo "=== Manual OIDC Login ==="
-        echo "Using Azure config directory: $AZURE_CONFIG_DIR"
-        
-        # Get OIDC token from GitHub
-        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
-        
-        # Login using Azure CLI with the OIDC token
-        az login --service-principal \
-          --username "${{ secrets.AZURE_CLIENT_ID }}" \
-          --federated-token "$TOKEN" \
-          --tenant "${{ secrets.AZURE_TENANT_ID }}"
-        
-        # Set subscription
-        az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
-
-    - name: Verify Azure Login Success
-      run: |
-        echo "=== Verifying Azure Account ==="
-        az account show --output table
-        az account list --output table
 
     - name: Build solution for deployment
       run: dotnet build --configuration Release
