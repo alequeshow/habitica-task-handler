@@ -53,8 +53,12 @@ jobs:
     - name: Install Azure Functions Core Tools
       run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
 
-    - name: Build solution for deployment
-      run: dotnet build --configuration Release
+    - name: Debug OIDC Token
+      run: |
+        echo "GitHub Token Endpoint: $ACTIONS_ID_TOKEN_REQUEST_URL"
+        echo "GitHub Token Available: $ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+        echo "Repository: $GITHUB_REPOSITORY"
+        echo "Ref: $GITHUB_REF"
 
     - name: Azure Login
       uses: azure/login@v2
@@ -62,6 +66,33 @@ jobs:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      env:
+        AZURE_CLI_DEBUG: true
+
+    - name: Test Azure Login Success
+      if: success()
+      run: |
+        echo "=== Azure Login Successful ==="
+        az account show --output table
+        az account list --output table
+
+    - name: Debug Azure Login Failure
+      if: failure()
+      run: |
+        echo "=== Azure Login Failed - Debug Information ==="
+        echo "Azure CLI Version:"
+        az --version
+        echo "Environment Variables:"
+        env | grep -E "(AZURE|GITHUB)" | sort
+        echo "Manual login attempt with verbose output:"
+        az login --service-principal \
+          --username "${{ secrets.AZURE_CLIENT_ID }}" \
+          --federated-token "$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)" \
+          --tenant "${{ secrets.AZURE_TENANT_ID }}" \
+          --debug
+
+    - name: Build solution for deployment
+      run: dotnet build --configuration Release
 
     - name: Deploy Azure Function
       run: |
