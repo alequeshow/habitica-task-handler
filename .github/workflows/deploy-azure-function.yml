@@ -57,6 +57,7 @@ jobs:
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
+        enable-AzPSSession: true
 
     - name: Deploy Azure Function
       run: |
