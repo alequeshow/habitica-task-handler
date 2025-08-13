@@ -90,12 +90,24 @@ jobs:
       if: failure()
       run: |
         echo "=== Azure Login Failed - Debug Information ==="
-        echo "Manual login attempt with verbose output:"
-        az login --service-principal \
-          --username "${{ secrets.AZURE_CLIENT_ID }}" \
-          --federated-token "$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)" \
-          --tenant "${{ secrets.AZURE_TENANT_ID }}" \
-          --debug
+        echo "Setting up Azure CLI directory permissions..."
+        mkdir -p ~/.azure
+        chmod 755 ~/.azure
+        echo "Fetching OIDC token manually..."
+        TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+        if [ "$TOKEN" = "null" ] || [ -z "$TOKEN" ]; then
+          echo "ERROR: Failed to get OIDC token"
+          echo "Token response:"
+          curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange"
+        else
+          echo "OIDC token acquired successfully"
+          echo "=== Manual Azure login attempt ==="
+          az login --service-principal \
+            --username "${{ secrets.AZURE_CLIENT_ID }}" \
+            --federated-token "$TOKEN" \
+            --tenant "${{ secrets.AZURE_TENANT_ID }}" \
+            --debug 2>&1 | head -50
+        fi
 
     - name: Build solution for deployment
       run: dotnet build --configuration Release
