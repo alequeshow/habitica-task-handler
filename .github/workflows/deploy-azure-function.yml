@@ -43,6 +43,18 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
+    - name: Setup Azure CLI Environment
+      run: |
+        # Use a writable directory for Azure CLI config
+        mkdir -p $GITHUB_WORKSPACE/.azure
+        
+        # Set Azure CLI to use our writable directory
+        echo "AZURE_CONFIG_DIR=$GITHUB_WORKSPACE/.azure" >> $GITHUB_ENV
+        
+        # Disable Azure CLI telemetry and version check
+        echo "AZURE_CORE_COLLECT_TELEMETRY=false" >> $GITHUB_ENV
+        echo "AZURE_CORE_NO_COLOR=true" >> $GITHUB_ENV
+
     - name: Install Azure CLI
       uses: azure/CLI@v2
       with:
@@ -55,8 +67,13 @@ jobs:
       run: npm install -g azure-functions-core-tools@4 --unsafe-perm true
 
     - name: Azure Login
+      env:
+        AZURE_CORE_COLLECT_TELEMETRY: false
+        AZURE_CORE_NO_COLOR: true
       run: |
         echo "=== Manual OIDC Login ==="
+        echo "Using Azure config directory: $AZURE_CONFIG_DIR"
+        
         # Get OIDC token from GitHub
         TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
         
