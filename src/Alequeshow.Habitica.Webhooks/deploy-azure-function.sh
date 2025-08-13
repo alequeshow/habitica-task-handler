@@ -19,11 +19,14 @@ az login
 # Set subscription if needed
 az account set --subscription "$SUBSCRIPTION_ID"
 
-# Create resource group
+# Create resource group (First deploy only)
 # az group create --name $RESOURCE_GROUP --location $LOCATION
 
-# # Create storage account
+# # Create storage account (First deploy only)
 # az storage account create --name $STORAGE_ACCOUNT --location $LOCATION --resource-group $RESOURCE_GROUP --sku Standard_LRS
+
+# Create a Service Principal (First deploy only)
+# az ad sp create-for-rbac --name "$FUNCTION_APP" --role contributor --scopes /subscriptions/$SUBSCRIPTION_ID
 
 # # Create function app (for .NET isolated process, adjust runtime if needed)
 # az functionapp create \
