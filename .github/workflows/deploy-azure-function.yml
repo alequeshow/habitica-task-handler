@@ -64,4 +64,4 @@ jobs:
     - name: Deploy Azure Function
       run: |
         cd src/Alequeshow.Habitica.Webhooks
-        func azure functionapp publish ${{ secrets.AZURE_FUNCTION_APP_NAME }}
+        func azure functionapp publish ${{ secrets.AZURE_FUNCTION_APP_NAME }} --dotnet-isolateds
