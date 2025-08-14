@@ -6,6 +6,7 @@ using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Refit;
 
 var builder = FunctionsApplication.CreateBuilder(args);
@@ -15,6 +16,18 @@ builder.ConfigureFunctionsWebApplication();
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights();
+
+builder.Services.Configure<LoggerFilterOptions>(options =>
+{
+    // Remove default Application Insights filter that might suppress logs
+    LoggerFilterRule? toRemove = options.Rules.FirstOrDefault(rule => rule.ProviderName
+        == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
+    
+    if (toRemove != null)
+    {
+        options.Rules.Remove(toRemove);
+    }
+});
 
 builder.Configuration
     .AddUserSecrets<Program>();
