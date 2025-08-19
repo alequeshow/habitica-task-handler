@@ -6,7 +6,7 @@ This repository is configured with GitHub Actions to automatically run tests on 
 
 ## Workflow Files
 
-### 1. `.github/workflows/pr-tests.yml`
+### 1. `.github/workflows/pr-validation.yml`
 - **Trigger**: Runs on pull request events (opened, updated, reopened) targeting the `main` branch
 - **Jobs**:
   - **test**: Builds the solution and runs all unit tests
