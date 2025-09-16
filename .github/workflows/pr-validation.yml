@@ -227,64 +227,80 @@ jobs:
           
           # Generate detailed uncovered lines report
           awk '
-          /<class/ {
-            in_class=1
-            filename=""
-            line_rate=""
-            uncovered_count=0
-          }
-          in_class && /filename="/ {
-            match($0, /filename="([^"]*)"/, arr)
-            filename=arr[1]
+          /<class / {
+            # Extract class-level line-rate and filename directly from class element
+            match($0, /line-rate="([^"]*)"/, rate_arr)
+            match($0, /filename="([^"]*)"/, file_arr)
+            
+            class_line_rate = rate_arr[1]
+            filename = file_arr[1]
             gsub(/.*\//, "", filename)  # Get just filename
+            
+            in_class=1
+            in_lines_section=0
             delete uncovered_lines
+            delete seen_lines
             uncovered_count=0
           }
-          in_class && /line-rate="/ {
-            match($0, /line-rate="([^"]*)"/, arr)
-            line_rate=arr[1]
+          in_class && /<lines>/ {
+            in_lines_section=1
           }
-          in_class && /<line / {
-            if ($0 ~ /hits="0"/) {
-              match($0, /number="([^"]*)"/, arr)
-              uncovered_lines[++uncovered_count] = arr[1]
+          in_class && in_lines_section && /<line / && /hits="0"/ {
+            match($0, /number="([^"]*)"/, arr)
+            line_num = arr[1]
+            
+            # Only add if we havent seen this line number before
+            if (!(line_num in seen_lines)) {
+              uncovered_lines[++uncovered_count] = line_num
+              seen_lines[line_num] = 1
             }
           }
-          in_class && /<\/class>/ {
-            if (filename != "" && uncovered_count > 0 && line_rate < 1.0) {
+          in_class && /<\/lines>/ {
+            in_lines_section=0
+          }
+          /<\/class>/ {
+            if (filename != "" && uncovered_count > 0 && class_line_rate < 1.0) {
               printf "\n### 📄 `%s`\n", filename
-              coverage_percent = int(line_rate * 100)
+              coverage_percent = int(class_line_rate * 100)
               printf "**Coverage: %d%%** - %d uncovered lines\n\n", coverage_percent, uncovered_count
               
               printf "<details>\n<summary>🔍 Click to see uncovered lines (%d lines)</summary>\n\n", uncovered_count
               printf "```\n"
               
-              # Group consecutive lines
-              start_line = 0
-              end_line = 0
-              
+              # Simple bubble sort for line numbers (since uncovered_count is usually small)
               for (i = 1; i <= uncovered_count; i++) {
-                current_line = uncovered_lines[i]
-                
-                if (start_line == 0) {
-                  start_line = current_line
-                  end_line = current_line
-                } else if (current_line == end_line + 1) {
-                  end_line = current_line
-                } else {
-                  # Print previous range
-                  if (start_line == end_line) {
-                    printf "Line %d\n", start_line
-                  } else {
-                    printf "Lines %d-%d\n", start_line, end_line
+                for (j = i + 1; j <= uncovered_count; j++) {
+                  if (uncovered_lines[i] > uncovered_lines[j]) {
+                    temp = uncovered_lines[i]
+                    uncovered_lines[i] = uncovered_lines[j]
+                    uncovered_lines[j] = temp
                   }
-                  start_line = current_line
-                  end_line = current_line
                 }
               }
               
-              # Print final range
-              if (start_line > 0) {
+              # Group consecutive lines
+              if (uncovered_count > 0) {
+                start_line = uncovered_lines[1]
+                end_line = uncovered_lines[1]
+                
+                for (i = 2; i <= uncovered_count; i++) {
+                  current_line = uncovered_lines[i]
+                  
+                  if (current_line == end_line + 1) {
+                    end_line = current_line
+                  } else {
+                    # Print previous range
+                    if (start_line == end_line) {
+                      printf "Line %d\n", start_line
+                    } else {
+                      printf "Lines %d-%d\n", start_line, end_line
+                    }
+                    start_line = current_line
+                    end_line = current_line
+                  }
+                }
+                
+                # Print final range
                 if (start_line == end_line) {
                   printf "Line %d\n", start_line
                 } else {
@@ -296,6 +312,7 @@ jobs:
               printf "</details>\n\n"
             }
             in_class=0
+            in_lines_section=0
           }
           ' "$COVERAGE_FILE" >> $GITHUB_STEP_SUMMARY
           
