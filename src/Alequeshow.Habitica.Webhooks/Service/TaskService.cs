@@ -37,15 +37,15 @@ public class TaskService(
 
     private async Task HandleDailyTasks()
     {
-        var dailies = await habiticaApiService.GetUserTasksAsync("dailys");    
+        var dailies = await habiticaApiService.GetUserTasksAsync("dailys");
 
-        if(!dailies.Any())
+        if (!dailies.Any())
         {
             logger.LogWarning("No tasks found.");
             return;
         }
 
-        foreach(var task in dailies)
+        foreach (var task in dailies)
         {
             await HandleSnoozedTaskAsync(task);
         }
@@ -53,7 +53,7 @@ public class TaskService(
 
     private async Task HandleSnoozedTaskAsync(Domain.Task task)
     {
-        if(IsSnoozeableTask(task))
+        if (IsSnoozeableTask(task))
         {
             try
             {
@@ -64,8 +64,8 @@ public class TaskService(
                     Tags = task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
                     Date = FollowingDueDate,
                     Checklist = task.Checklist?.Where(c => !c.Completed).Select(
-                        item => item with 
-                        { 
+                        item => item with
+                        {
                             Id = Guid.NewGuid().ToString(),
                         }
                     ).ToList(),
@@ -85,9 +85,9 @@ public class TaskService(
                 };
 
                 logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask);
-    
+
                 var result = await habiticaApiService.CreateUserTasksAsync(todoTask);
-    
+
                 logger.LogInformation("Snoozed task created! {NewTask}", result.ToString());
             }
             catch (Exception ex)

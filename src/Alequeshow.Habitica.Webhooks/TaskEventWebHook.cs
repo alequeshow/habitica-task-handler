@@ -19,9 +19,9 @@ namespace Alequeshow.Habitica.Webhooks
 
                 logger.LogInformation("TaskEventWebHook received request: {RequestBody}", requestContent.ToString());
 
-                if(requestContent.Body != null)
+                if (requestContent.Body != null)
                 {
-                    await taskService.HandleTaskActivityAsync(requestContent.Body);                    
+                    await taskService.HandleTaskActivityAsync(requestContent.Body);
                 }
             }
             catch (Exception ex)

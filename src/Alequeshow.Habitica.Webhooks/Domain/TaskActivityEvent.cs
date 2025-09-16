@@ -4,7 +4,7 @@ public class TaskActivityEvent
 {
     public required string Type { get; set; }
 
-    public string? Direction { get; set; }   
+    public string? Direction { get; set; }
 
     public required Task Task { get; set; }
 

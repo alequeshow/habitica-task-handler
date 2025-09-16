@@ -22,7 +22,7 @@ builder.Services.Configure<LoggerFilterOptions>(options =>
     // Remove default Application Insights filter that might suppress logs
     LoggerFilterRule? toRemove = options.Rules.FirstOrDefault(rule => rule.ProviderName
         == "Microsoft.Extensions.Logging.ApplicationInsights.ApplicationInsightsLoggerProvider");
-    
+
     if (toRemove != null)
     {
         options.Rules.Remove(toRemove);
@@ -44,7 +44,7 @@ builder.Services.AddSingleton<ITaskService, TaskService>();
 builder.Services.AddSingleton<IHabiticaApiService, HabiticaApiService>();
 
 builder.Services.AddRefitClient<IHabiticaApiClient>()
-    .ConfigureHttpClient(httpClient => 
+    .ConfigureHttpClient(httpClient =>
     {
         httpClient.BaseAddress = new Uri(configuration["HABITICA_URL"]!);
         httpClient.DefaultRequestHeaders.Add("x-client", $"{configuration["HABITICA_USER_ID"]}-task-snoozer");
