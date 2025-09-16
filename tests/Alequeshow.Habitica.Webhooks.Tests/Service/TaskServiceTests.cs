@@ -265,6 +265,25 @@ public class TaskServiceTestsSimplified
         )), Times.Once);
     }
 
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotHandleSnoozedButNotDueTask()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        var taskName = "Snoozed Task";
+        
+        var snoozedTask = CreateTestTask("daily", taskName, [SnoozedTagId], isDue: false);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
+                       .ReturnsAsync([snoozedTask]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
     private static DomainTask CreateTestTask(string type, string text, List<string> tags, bool isDue = true)
     {
         var task = new DomainTask
