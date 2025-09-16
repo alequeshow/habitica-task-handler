@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Alequeshow.Habitica.Webhooks.Domain;
@@ -107,6 +108,7 @@ public record Task
             : $"{Notes}\n{string.Join("\n", notes)}";
     }
 
+    [ExcludeFromCodeCoverage]
     public override string ToString()
     {
         return JsonSerializer.Serialize(this);
