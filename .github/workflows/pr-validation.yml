@@ -194,25 +194,173 @@ jobs:
             });
           }
 
-    - name: Write coverage to job summary
+    - name: Generate detailed coverage report
       if: always()
       run: |
-        echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-        echo "| **Line Coverage** | **${{ steps.coverage.outputs.percentage }}%** |" >> $GITHUB_STEP_SUMMARY
-        echo "| Lines Covered | ${{ steps.coverage.outputs.lines_covered }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| Total Lines | ${{ steps.coverage.outputs.lines_valid }} |" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+        # Find the coverage file
+        COVERAGE_FILE=$(find TestResults -name "coverage.cobertura.xml" -type f | head -1)
         
-        COVERAGE=${{ steps.coverage.outputs.percentage }}
-        if [ "$COVERAGE" -ge 80 ]; then
-          echo "✅ **Excellent coverage!**" >> $GITHUB_STEP_SUMMARY
-        elif [ "$COVERAGE" -ge 60 ]; then
-          echo "⚠️ **Good coverage, could be improved**" >> $GITHUB_STEP_SUMMARY
+        if [ -f "$COVERAGE_FILE" ]; then
+          echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Line Coverage** | **${{ steps.coverage.outputs.percentage }}%** |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lines Covered | ${{ steps.coverage.outputs.lines_covered }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Lines | ${{ steps.coverage.outputs.lines_valid }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          COVERAGE=${{ steps.coverage.outputs.percentage }}
+          if [ "$COVERAGE" -ge 80 ]; then
+            echo "✅ **Excellent coverage!**" >> $GITHUB_STEP_SUMMARY
+          elif [ "$COVERAGE" -ge 60 ]; then
+            echo "⚠️ **Good coverage, could be improved**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Coverage needs improvement**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📁 File Coverage Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Extract file-level coverage information
+          echo "| File | Coverage | Lines Covered | Total Lines | Uncovered Lines |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|----------|---------------|-------------|-----------------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Parse each class/file from the XML
+          awk '
+          /<class/ {
+            in_class=1
+            filename=""
+            line_rate=""
+            lines_covered=""
+            lines_valid=""
+            uncovered_lines=""
+          }
+          in_class && /filename="/ {
+            match($0, /filename="([^"]*)"/, arr)
+            filename=arr[1]
+            # Extract just the filename from the path
+            gsub(/.*\//, "", filename)
+          }
+          in_class && /line-rate="/ {
+            match($0, /line-rate="([^"]*)"/, arr)
+            line_rate=arr[1]
+          }
+          in_class && /lines-covered="/ {
+            match($0, /lines-covered="([^"]*)"/, arr)
+            lines_covered=arr[1]
+          }
+          in_class && /lines-valid="/ {
+            match($0, /lines-valid="([^"]*)"/, arr)
+            lines_valid=arr[1]
+          }
+          in_class && /<line / {
+            if ($0 ~ /hits="0"/) {
+              match($0, /number="([^"]*)"/, arr)
+              if (uncovered_lines == "") {
+                uncovered_lines = arr[1]
+              } else {
+                uncovered_lines = uncovered_lines ", " arr[1]
+              }
+            }
+          }
+          in_class && /<\/class>/ {
+            if (filename != "" && lines_valid > 0) {
+              coverage_percent = int(line_rate * 100)
+              if (length(uncovered_lines) > 50) {
+                uncovered_lines = substr(uncovered_lines, 1, 47) "..."
+              }
+              if (uncovered_lines == "") {
+                uncovered_lines = "All covered ✅"
+              }
+              printf "| `%s` | %d%% | %s | %s | %s |\n", filename, coverage_percent, lines_covered, lines_valid, uncovered_lines
+            }
+            in_class=0
+          }
+          ' "$COVERAGE_FILE" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Uncovered Code Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Generate detailed uncovered lines report
+          awk '
+          /<class/ {
+            in_class=1
+            filename=""
+            line_rate=""
+            uncovered_count=0
+          }
+          in_class && /filename="/ {
+            match($0, /filename="([^"]*)"/, arr)
+            filename=arr[1]
+            gsub(/.*\//, "", filename)  # Get just filename
+            delete uncovered_lines
+            uncovered_count=0
+          }
+          in_class && /line-rate="/ {
+            match($0, /line-rate="([^"]*)"/, arr)
+            line_rate=arr[1]
+          }
+          in_class && /<line / {
+            if ($0 ~ /hits="0"/) {
+              match($0, /number="([^"]*)"/, arr)
+              uncovered_lines[++uncovered_count] = arr[1]
+            }
+          }
+          in_class && /<\/class>/ {
+            if (filename != "" && uncovered_count > 0 && line_rate < 1.0) {
+              printf "\n### 📄 `%s`\n", filename
+              coverage_percent = int(line_rate * 100)
+              printf "**Coverage: %d%%** - %d uncovered lines\n\n", coverage_percent, uncovered_count
+              
+              printf "<details>\n<summary>🔍 Click to see uncovered lines (%d lines)</summary>\n\n", uncovered_count
+              printf "```\n"
+              
+              # Group consecutive lines
+              start_line = 0
+              end_line = 0
+              
+              for (i = 1; i <= uncovered_count; i++) {
+                current_line = uncovered_lines[i]
+                
+                if (start_line == 0) {
+                  start_line = current_line
+                  end_line = current_line
+                } else if (current_line == end_line + 1) {
+                  end_line = current_line
+                } else {
+                  # Print previous range
+                  if (start_line == end_line) {
+                    printf "Line %d\n", start_line
+                  } else {
+                    printf "Lines %d-%d\n", start_line, end_line
+                  }
+                  start_line = current_line
+                  end_line = current_line
+                }
+              }
+              
+              # Print final range
+              if (start_line > 0) {
+                if (start_line == end_line) {
+                  printf "Line %d\n", start_line
+                } else {
+                  printf "Lines %d-%d\n", start_line, end_line
+                }
+              }
+              
+              printf "```\n\n"
+              printf "</details>\n\n"
+            }
+            in_class=0
+          }
+          ' "$COVERAGE_FILE" >> $GITHUB_STEP_SUMMARY
+          
         else
-          echo "❌ **Coverage needs improvement**" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage report not generated" >> $GITHUB_STEP_SUMMARY
         fi
 
   code-quality:
