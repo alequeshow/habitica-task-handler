@@ -60,10 +60,14 @@ public record Task
 
         if (lastEntry != null)
         {
-            return 
-                lastEntry.IsDue == true &&
+            return
+                (lastEntry.IsDue == true &&
                 lastEntry.Completed == false &&
-                lastEntry.Date.Date == dateToCompare.Date;
+                lastEntry.Date.Date == dateToCompare.Date)
+                || (
+                    IsDue == true &&
+                    Completed == false
+                );
         }
 
         return 
@@ -86,6 +90,11 @@ public record Task
             .FirstOrDefault();
     }
 
+    public bool HasTag(string tagId)
+    {
+        return Tags?.Contains(tagId) == true;
+    }
+
     public void WriteNotes(params string[] notes)
     {
         if (notes == null || notes.Length == 0)
@@ -101,5 +110,5 @@ public record Task
     public override string ToString()
     {
         return JsonSerializer.Serialize(this);
-    }
+    }    
 }    

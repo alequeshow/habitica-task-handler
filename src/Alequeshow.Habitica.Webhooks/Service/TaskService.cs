@@ -99,9 +99,24 @@ public class TaskService(
 
     private bool IsSnoozeableTask(Domain.Task task)
     {
-        return 
-            task.IsDaily() &&
-            task.IsDueInDate(IsDueDateComparer) &&
-            (task.Tags?.Contains(SnoozeableTagId) == true);
+        if (!task.HasTag(SnoozeableTagId) || !task.IsDaily())
+            return false;
+
+        var logTask = new Domain.Task
+        {
+            Id = task.Id,
+            Text = task.Text,
+            Type = task.Type,
+            Checklist = task.Checklist,
+            Completed = task.Completed,
+            IsDue = task.IsDue,
+            History = [ ..(task.History ?? Enumerable.Empty<Domain.History>())
+                .OrderByDescending(h => h.Date).Take(2)],
+        };
+
+        logger.LogInformation("Snoozed task to have due to compared in {dateToCompare}: {task}",
+            IsDueDateComparer.Date, logTask.ToString());
+
+        return task.IsDueInDate(IsDueDateComparer);
     }
 }

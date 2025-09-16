@@ -3,20 +3,19 @@ using System.Text.Json.Serialization;
 
 namespace Alequeshow.Habitica.Webhooks.Helpers
 {
-    public class EpochDateTimeConverter : JsonConverter<DateTime>
+    public class EpochReadIsoWriteDateTimeConverter : JsonConverter<DateTime>
     {
         public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            // Convert epoch time (long) to DateTime
+            // Convert epoch time (long) to DateTime for API deserialization
             var epochTime = reader.GetInt64();
             return DateTimeOffset.FromUnixTimeMilliseconds(epochTime).UtcDateTime;
         }
 
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
         {
-            // Convert DateTime to epoch time (long)
-            var epochTime = new DateTimeOffset(value).ToUnixTimeMilliseconds();
-            writer.WriteNumberValue(epochTime);
+            // Write DateTime in ISO format for serialization
+            writer.WriteStringValue(value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
         }
     }
 }
