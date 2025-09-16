@@ -219,66 +219,7 @@ jobs:
             echo "❌ **Coverage needs improvement**" >> $GITHUB_STEP_SUMMARY
           fi
           
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📁 File Coverage Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Extract file-level coverage information
-          echo "| File | Coverage | Lines Covered | Total Lines | Uncovered Lines |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|----------|---------------|-------------|-----------------|" >> $GITHUB_STEP_SUMMARY
-          
-          # Parse each class/file from the XML
-          awk '
-          /<class/ {
-            in_class=1
-            filename=""
-            line_rate=""
-            lines_covered=""
-            lines_valid=""
-            uncovered_lines=""
-          }
-          in_class && /filename="/ {
-            match($0, /filename="([^"]*)"/, arr)
-            filename=arr[1]
-            # Extract just the filename from the path
-            gsub(/.*\//, "", filename)
-          }
-          in_class && /line-rate="/ {
-            match($0, /line-rate="([^"]*)"/, arr)
-            line_rate=arr[1]
-          }
-          in_class && /lines-covered="/ {
-            match($0, /lines-covered="([^"]*)"/, arr)
-            lines_covered=arr[1]
-          }
-          in_class && /lines-valid="/ {
-            match($0, /lines-valid="([^"]*)"/, arr)
-            lines_valid=arr[1]
-          }
-          in_class && /<line / {
-            if ($0 ~ /hits="0"/) {
-              match($0, /number="([^"]*)"/, arr)
-              if (uncovered_lines == "") {
-                uncovered_lines = arr[1]
-              } else {
-                uncovered_lines = uncovered_lines ", " arr[1]
-              }
-            }
-          }
-          in_class && /<\/class>/ {
-            if (filename != "" && lines_valid > 0) {
-              coverage_percent = int(line_rate * 100)
-              if (length(uncovered_lines) > 50) {
-                uncovered_lines = substr(uncovered_lines, 1, 47) "..."
-              }
-              if (uncovered_lines == "") {
-                uncovered_lines = "All covered ✅"
-              }
-              printf "| `%s` | %d%% | %s | %s | %s |\n", filename, coverage_percent, lines_covered, lines_valid, uncovered_lines
-            }
-            in_class=0
-          }
-          ' "$COVERAGE_FILE" >> $GITHUB_STEP_SUMMARY
+
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 🔍 Uncovered Code Analysis" >> $GITHUB_STEP_SUMMARY
