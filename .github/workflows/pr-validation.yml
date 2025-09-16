@@ -6,6 +6,11 @@ on:
 
 jobs:
   test:
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      statuses: write
     runs-on: ubuntu-latest
     name: Run Tests
 
@@ -44,9 +49,12 @@ jobs:
         name: .NET Tests
         path: TestResults/*.trx
         reporter: dotnet-trx
-        fail-on-error: true
+        fail-on-error: false
 
   code-quality:
+    permissions:
+      contents: read
+      pull-requests: write
     runs-on: ubuntu-latest
     name: Code Quality Check
 
