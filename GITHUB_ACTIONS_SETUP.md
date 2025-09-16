@@ -37,8 +37,8 @@ Configure the following settings:
 - ✅ **Require status checks to pass before merging**
   - ✅ **Require branches to be up to date before merging**
   - **Required status checks**: Add these checks:
-    - `test` (from pr-tests.yml)
-    - `code-quality` (from pr-tests.yml)
+    - `test` (from pr-validation.yml)
+    - `code-quality` (from pr-validation.yml)
 
 #### Optional but Recommended:
 - ✅ **Require conversation resolution before merging**
