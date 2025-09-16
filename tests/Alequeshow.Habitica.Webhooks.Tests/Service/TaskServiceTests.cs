@@ -15,7 +15,7 @@ public class TaskServiceTestsSimplified
     private readonly Mock<IHabiticaApiService> _mockHabiticaApiService;
     private readonly Mock<IOptions<TaskServiceOptions>> _mockOptions;
     private readonly TaskServiceOptions _defaultOptions;
-    private const string SnoozedTagId = "test-tag-id";    
+    private const string SnoozedTagId = "test-tag-id";
 
     public TaskServiceTestsSimplified()
     {
@@ -272,7 +272,7 @@ public class TaskServiceTestsSimplified
         var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
 
         var taskName = "Snoozed Task";
-        
+
         var snoozedTask = CreateTestTask("daily", taskName, [SnoozedTagId], isDue: false);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ReturnsAsync([snoozedTask]);
