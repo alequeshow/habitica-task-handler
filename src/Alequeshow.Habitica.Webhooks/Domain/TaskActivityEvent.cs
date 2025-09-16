@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Alequeshow.Habitica.Webhooks.Domain;
 
 public class TaskActivityEvent
@@ -10,5 +12,6 @@ public class TaskActivityEvent
 
     public string? WebhookType { get; set; }
 
+    [ExcludeFromCodeCoverage]
     public bool IsUpdateEvent() => string.Equals(Type, "updated", StringComparison.CurrentCultureIgnoreCase);
 }
