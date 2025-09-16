@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Alequeshow.Habitica.Webhooks.Domain;
 using Microsoft.AspNetCore.Http;
 
 namespace Alequeshow.Habitica.Webhooks
 {
+    [ExcludeFromCodeCoverage]
     public class RequestContent
     {
         public Dictionary<string, string> Headers { get; set; } = [];

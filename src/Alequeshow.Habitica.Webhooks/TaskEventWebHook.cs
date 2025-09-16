@@ -3,9 +3,11 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Alequeshow.Habitica.Webhooks
 {
+    [ExcludeFromCodeCoverage]
     public class TaskEventWebHook(
         ILogger<TaskEventWebHook> logger,
         ITaskService taskService)

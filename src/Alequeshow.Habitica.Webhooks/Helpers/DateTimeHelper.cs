@@ -1,5 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Alequeshow.Habitica.Webhooks.Helpers;
 
+[ExcludeFromCodeCoverage]
 public static class DateTimeHelper
 {
     public static DateTime FromBrtToUtc(this DateTime dateTime)

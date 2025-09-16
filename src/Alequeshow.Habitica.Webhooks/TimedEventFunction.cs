@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Alequeshow.Habitica.Webhooks.Service.Interfaces;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
 namespace Alequeshow.Habitica.Webhooks
 {
+    [ExcludeFromCodeCoverage]
     public class TimedEventFunction(
         ILogger<TimedEventFunction> logger,
         ITaskService taskService)
