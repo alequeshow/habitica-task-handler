@@ -1,0 +1,347 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  test:
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+      statuses: write
+    runs-on: ubuntu-latest
+    name: Run Tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release
+
+    - name: Run tests with coverage
+      run: dotnet test --no-build --configuration Release --verbosity normal --logger trx --results-directory TestResults --collect:"XPlat Code Coverage" --settings coverlet.runsettings
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: TestResults/*.trx
+        retention-days: 30
+
+    - name: Parse and report test results
+      if: always()
+      run: |
+        echo "## 🧪 Test Results" >> $GITHUB_STEP_SUMMARY
+        
+        # Count test results from TRX files
+        TOTAL_TESTS=0
+        PASSED_TESTS=0
+        FAILED_TESTS=0
+        
+        for trx_file in TestResults/*.trx; do
+          if [ -f "$trx_file" ]; then
+            # Parse TRX file for test counts (basic parsing)
+            TOTAL=$(grep -o 'total="[0-9]*"' "$trx_file" | grep -o '[0-9]*' || echo "0")
+            PASSED=$(grep -o 'passed="[0-9]*"' "$trx_file" | grep -o '[0-9]*' || echo "0")
+            FAILED=$(grep -o 'failed="[0-9]*"' "$trx_file" | grep -o '[0-9]*' || echo "0")
+            
+            TOTAL_TESTS=$((TOTAL_TESTS + TOTAL))
+            PASSED_TESTS=$((PASSED_TESTS + PASSED))
+            FAILED_TESTS=$((FAILED_TESTS + FAILED))
+          fi
+        done
+        
+        echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+        echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Total Tests | $TOTAL_TESTS |" >> $GITHUB_STEP_SUMMARY
+        echo "| Passed | ✅ $PASSED_TESTS |" >> $GITHUB_STEP_SUMMARY
+        echo "| Failed | ❌ $FAILED_TESTS |" >> $GITHUB_STEP_SUMMARY
+        
+        if [ $FAILED_TESTS -gt 0 ]; then
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "❌ **Some tests failed!** Check the test run details above." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload raw coverage files
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: raw-coverage-files
+        path: TestResults/**/coverage.cobertura.xml
+        retention-days: 30
+
+    - name: Parse coverage from Cobertura XML
+      if: always()
+      id: coverage
+      run: |
+        # Find the coverage file
+        COVERAGE_FILE=$(find TestResults -name "coverage.cobertura.xml" -type f | head -1)
+        
+        if [ -f "$COVERAGE_FILE" ]; then
+          echo "Found coverage file: $COVERAGE_FILE"
+          
+          # Parse XML using basic shell tools
+          # Extract line-rate from coverage element (this is line coverage as decimal)
+          LINE_RATE=$(grep -o 'line-rate="[0-9.]*"' "$COVERAGE_FILE" | head -1 | grep -o '[0-9.]*')
+          
+          if [ ! -z "$LINE_RATE" ]; then
+            # Convert to percentage using awk (more portable than bc)
+            COVERAGE_PERCENT=$(echo "$LINE_RATE" | awk '{printf "%.0f", $1 * 100}')
+            echo "percentage=$COVERAGE_PERCENT" >> $GITHUB_OUTPUT
+            echo "Coverage: $COVERAGE_PERCENT%"
+            
+            # Extract some basic stats
+            LINES_COVERED=$(grep -o 'lines-covered="[0-9]*"' "$COVERAGE_FILE" | head -1 | grep -o '[0-9]*')
+            LINES_VALID=$(grep -o 'lines-valid="[0-9]*"' "$COVERAGE_FILE" | head -1 | grep -o '[0-9]*')
+            
+            echo "lines_covered=$LINES_COVERED" >> $GITHUB_OUTPUT
+            echo "lines_valid=$LINES_VALID" >> $GITHUB_OUTPUT
+            
+          else
+            echo "Could not parse coverage rate"
+            echo "percentage=0" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "No coverage file found"
+          echo "percentage=0" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Add coverage comment to PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const coverage = '${{ steps.coverage.outputs.percentage }}';
+          const linesCovered = '${{ steps.coverage.outputs.lines_covered }}';
+          const linesValid = '${{ steps.coverage.outputs.lines_valid }}';
+          
+          // Create coverage badge color
+          let badgeColor = 'red';
+          if (coverage >= 80) badgeColor = 'green';
+          else if (coverage >= 60) badgeColor = 'yellow';
+          
+          const badge = coverage > 0 ? `![Coverage](https://img.shields.io/badge/coverage-${coverage}%25-${badgeColor})` : '';
+          
+          const comment = `## 📊 Code Coverage Report
+          
+          ${badge}
+          
+          | Metric | Value |
+          |--------|-------|
+          | **Line Coverage** | **${coverage}%** |
+          | Lines Covered | ${linesCovered || 'N/A'} |
+          | Total Lines | ${linesValid || 'N/A'} |
+          
+          ### Coverage Status
+          ${coverage >= 80 ? '✅ **Excellent coverage!**' : 
+            coverage >= 60 ? '⚠️ **Good coverage, could be improved**' : 
+            '❌ **Coverage needs improvement**'}
+          
+          ---
+          *Coverage report generated automatically for this PR*`;
+          
+          // Find existing coverage comment
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const existingComment = comments.data.find(comment => 
+            comment.body.includes('📊 Code Coverage Report')
+          );
+          
+          if (existingComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: comment
+            });
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }
+
+    - name: Generate detailed coverage report
+      if: always()
+      run: |
+        # Find the coverage file
+        COVERAGE_FILE=$(find TestResults -name "coverage.cobertura.xml" -type f | head -1)
+        
+        if [ -f "$COVERAGE_FILE" ]; then
+          echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Line Coverage** | **${{ steps.coverage.outputs.percentage }}%** |" >> $GITHUB_STEP_SUMMARY
+          echo "| Lines Covered | ${{ steps.coverage.outputs.lines_covered }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Lines | ${{ steps.coverage.outputs.lines_valid }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          COVERAGE=${{ steps.coverage.outputs.percentage }}
+          if [ "$COVERAGE" -ge 80 ]; then
+            echo "✅ **Excellent coverage!**" >> $GITHUB_STEP_SUMMARY
+          elif [ "$COVERAGE" -ge 60 ]; then
+            echo "⚠️ **Good coverage, could be improved**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Coverage needs improvement**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Uncovered Code Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Generate detailed uncovered lines report
+          awk '
+          /<class / {
+            # Extract class-level line-rate and filename directly from class element
+            match($0, /line-rate="([^"]*)"/, rate_arr)
+            match($0, /filename="([^"]*)"/, file_arr)
+            
+            class_line_rate = rate_arr[1]
+            filename = file_arr[1]
+            gsub(/.*\//, "", filename)  # Get just filename
+            
+            in_class=1
+            in_lines_section=0
+            delete uncovered_lines
+            delete seen_lines
+            uncovered_count=0
+          }
+          in_class && /<lines>/ {
+            in_lines_section=1
+          }
+          in_class && in_lines_section && /<line / && /hits="0"/ {
+            match($0, /number="([^"]*)"/, arr)
+            line_num = arr[1]
+            
+            # Only add if we havent seen this line number before
+            if (!(line_num in seen_lines)) {
+              uncovered_lines[++uncovered_count] = line_num
+              seen_lines[line_num] = 1
+            }
+          }
+          in_class && /<\/lines>/ {
+            in_lines_section=0
+          }
+          /<\/class>/ {
+            if (filename != "" && uncovered_count > 0 && class_line_rate < 1.0) {
+              printf "\n### 📄 `%s`\n", filename
+              coverage_percent = int(class_line_rate * 100)
+              printf "**Coverage: %d%%** - %d uncovered lines\n\n", coverage_percent, uncovered_count
+              
+              printf "<details>\n<summary>🔍 Click to see uncovered lines (%d lines)</summary>\n\n", uncovered_count
+              printf "```\n"
+              
+              # Simple bubble sort for line numbers (since uncovered_count is usually small)
+              for (i = 1; i <= uncovered_count; i++) {
+                for (j = i + 1; j <= uncovered_count; j++) {
+                  if (uncovered_lines[i] > uncovered_lines[j]) {
+                    temp = uncovered_lines[i]
+                    uncovered_lines[i] = uncovered_lines[j]
+                    uncovered_lines[j] = temp
+                  }
+                }
+              }
+              
+              # Group consecutive lines
+              if (uncovered_count > 0) {
+                start_line = uncovered_lines[1]
+                end_line = uncovered_lines[1]
+                
+                for (i = 2; i <= uncovered_count; i++) {
+                  current_line = uncovered_lines[i]
+                  
+                  if (current_line == end_line + 1) {
+                    end_line = current_line
+                  } else {
+                    # Print previous range
+                    if (start_line == end_line) {
+                      printf "Line %d\n", start_line
+                    } else {
+                      printf "Lines %d-%d\n", start_line, end_line
+                    }
+                    start_line = current_line
+                    end_line = current_line
+                  }
+                }
+                
+                # Print final range
+                if (start_line == end_line) {
+                  printf "Line %d\n", start_line
+                } else {
+                  printf "Lines %d-%d\n", start_line, end_line
+                }
+              }
+              
+              printf "```\n\n"
+              printf "</details>\n\n"
+            }
+            in_class=0
+            in_lines_section=0
+          }
+          ' "$COVERAGE_FILE" >> $GITHUB_STEP_SUMMARY
+          
+        else
+          echo "## 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage report not generated" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  code-quality:
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+    name: Code Quality Check
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build and analyze
+      run: dotnet build --no-restore --configuration Release --verbosity normal
+
+    - name: Check formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic

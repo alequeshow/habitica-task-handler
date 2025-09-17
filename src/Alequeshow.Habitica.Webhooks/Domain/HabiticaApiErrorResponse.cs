@@ -2,7 +2,7 @@ namespace Alequeshow.Habitica.Webhooks.Domain;
 
 public record HabiticaApiErrorResponse
 {
-    public bool Success { get; set; }    
+    public bool Success { get; set; }
 
     public string? Error { get; set; }
 

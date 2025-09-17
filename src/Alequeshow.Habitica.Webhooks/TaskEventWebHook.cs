@@ -3,9 +3,11 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Alequeshow.Habitica.Webhooks
 {
+    [ExcludeFromCodeCoverage]
     public class TaskEventWebHook(
         ILogger<TaskEventWebHook> logger,
         ITaskService taskService)
@@ -19,9 +21,9 @@ namespace Alequeshow.Habitica.Webhooks
 
                 logger.LogInformation("TaskEventWebHook received request: {RequestBody}", requestContent.ToString());
 
-                if(requestContent.Body != null)
+                if (requestContent.Body != null)
                 {
-                    await taskService.HandleTaskActivityAsync(requestContent.Body);                    
+                    await taskService.HandleTaskActivityAsync(requestContent.Body);
                 }
             }
             catch (Exception ex)

@@ -5,7 +5,7 @@ namespace Alequeshow.Habitica.Webhooks.Domain;
 
 public record History
 {
-    [JsonConverter(typeof(EpochDateTimeConverter))]
+    [JsonConverter(typeof(EpochReadIsoWriteDateTimeConverter))]
     public required DateTime Date { get; set; }
 
     public double? Value { get; set; }

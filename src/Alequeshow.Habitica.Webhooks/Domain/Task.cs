@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace Alequeshow.Habitica.Webhooks.Domain;
@@ -49,7 +50,7 @@ public record Task
     /// <summary>
     /// N/A to Habits
     /// </summary>
-    public bool? Completed { get; set; }    
+    public bool? Completed { get; set; }
 
     public bool IsDaily() => string.Equals(Type, "daily", StringComparison.CurrentCultureIgnoreCase);
 
@@ -60,13 +61,17 @@ public record Task
 
         if (lastEntry != null)
         {
-            return 
-                lastEntry.IsDue == true &&
+            return
+                (lastEntry.IsDue == true &&
                 lastEntry.Completed == false &&
-                lastEntry.Date.Date == dateToCompare.Date;
+                lastEntry.Date.Date == dateToCompare.Date)
+                || (
+                    IsDue == true &&
+                    Completed == false
+                );
         }
 
-        return 
+        return
             IsDue == true &&
             Completed == false;
     }
@@ -79,11 +84,16 @@ public record Task
         {
             return null;
         }
-        
+
         return History
             .Where(h => h.Date.Date <= dateToCompare.Date)
             .OrderByDescending(h => h.Date)
             .FirstOrDefault();
+    }
+
+    public bool HasTag(string tagId)
+    {
+        return Tags?.Contains(tagId) == true;
     }
 
     public void WriteNotes(params string[] notes)
@@ -93,13 +103,14 @@ public record Task
             return;
         }
 
-        Notes = string.IsNullOrEmpty(Notes) 
-            ? string.Join("\n", notes) 
+        Notes = string.IsNullOrEmpty(Notes)
+            ? string.Join("\n", notes)
             : $"{Notes}\n{string.Join("\n", notes)}";
     }
 
+    [ExcludeFromCodeCoverage]
     public override string ToString()
     {
         return JsonSerializer.Serialize(this);
     }
-}    
+}
