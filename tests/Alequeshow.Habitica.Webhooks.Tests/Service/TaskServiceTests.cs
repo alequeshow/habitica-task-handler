@@ -251,6 +251,8 @@ public class TaskServiceTestsSimplified
         var snoozedTask = CreateTestTask("daily", taskName, [SnoozedTagId, otherTag], isDue: true);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ReturnsAsync([snoozedTask]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
+                       .ReturnsAsync([]);
 
         // Act
         await service.HandleCronAsync();
@@ -259,7 +261,7 @@ public class TaskServiceTestsSimplified
         _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.Is<DomainTask>(
             t => t.Type == "todo" &&
                  t.Text == "Snoozed Task" &&
-                 t.Tags != null && t.Tags.Contains(otherTag) && !t.Tags.Contains(SnoozedTagId) &&
+                 t.Tags != null && t.Tags.Contains(otherTag) && t.Tags.Contains(SnoozedTagId) &&
                  t.Date!.Value.Date == DateTime.Today.FromBrtToUtc().AddDays(1).Date &&
                  t.Notes == "Daily Snoozed. Do it!!"
         )), Times.Once);
@@ -276,6 +278,32 @@ public class TaskServiceTestsSimplified
         var snoozedTask = CreateTestTask("daily", taskName, [SnoozedTagId], isDue: false);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
                        .ReturnsAsync([snoozedTask]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
+                       .ReturnsAsync([]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotCreateDuplicatedSnoozedTask_WhenMatchingTaggedTodoAlreadyExists()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var taskName = "Snoozed Task";
+
+        var dailyTask = CreateTestTask("daily", taskName, [SnoozedTagId], isDue: true);
+        var existingTodo = CreateTestTask("todo", taskName, [SnoozedTagId], isDue: false);
+        existingTodo.Date = DateTime.Today.FromBrtToUtc().AddDays(1);
+        existingTodo.Completed = false;
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
+            .ReturnsAsync([dailyTask]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
+            .ReturnsAsync([existingTodo]);
 
         // Act
         await service.HandleCronAsync();
