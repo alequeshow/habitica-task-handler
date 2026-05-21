@@ -45,23 +45,40 @@ public class TaskService(
             return;
         }
 
+        var existingSnoozedTodos = await GetExistingSnoozedTodosAsync();
+
         foreach (var task in dailies)
         {
-            await HandleSnoozedTaskAsync(task);
+            await HandleSnoozedTaskAsync(task, existingSnoozedTodos);
         }
     }
 
-    private async Task HandleSnoozedTaskAsync(Domain.Task task)
+    private async Task<List<Domain.Task>> GetExistingSnoozedTodosAsync()
+    {
+        var todos = await habiticaApiService.GetUserTasksAsync("todos");
+
+        return [.. todos.Where(task =>
+            task.HasTag(SnoozeableTagId)
+            && task.Completed != true)];
+    }
+
+    private async Task HandleSnoozedTaskAsync(Domain.Task task, List<Domain.Task> existingSnoozedTodos)
     {
         if (IsSnoozeableTask(task))
         {
             try
             {
+                if (existingSnoozedTodos.Any(existingTask => IsSameSnoozedTask(existingTask, task)))
+                {
+                    logger.LogInformation("Snoozed task already exists for {TaskId}. Skipping creation.", task.Id);
+                    return;
+                }
+
                 var todoTask = task! with
                 {
                     Type = "todo",
                     Completed = false,
-                    Tags = task.Tags?.Where(tag => tag != SnoozeableTagId).ToList(),
+                    Tags = task.Tags?.Distinct().ToList(),
                     Date = FollowingDueDate,
                     Checklist = task.Checklist?.Where(c => !c.Completed).Select(
                         item => item with
@@ -87,6 +104,8 @@ public class TaskService(
                 logger.LogInformation("Snoozed task detected to be created with payload {NewTask}", todoTask);
 
                 var result = await habiticaApiService.CreateUserTasksAsync(todoTask);
+
+                existingSnoozedTodos.Add(result);
 
                 logger.LogInformation("Snoozed task created! {NewTask}", result.ToString());
             }
@@ -118,5 +137,11 @@ public class TaskService(
             IsDueDateComparer.Date, logTask.ToString());
 
         return task.IsDueInDate(IsDueDateComparer);
+    }
+
+    private bool IsSameSnoozedTask(Domain.Task existingTask, Domain.Task sourceDailyTask)
+    {
+        return string.Equals(existingTask.Text, sourceDailyTask.Text, StringComparison.Ordinal)
+            && existingTask.Date?.Date == FollowingDueDate.Date;
     }
 }
