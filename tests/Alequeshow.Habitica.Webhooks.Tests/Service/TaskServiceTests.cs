@@ -289,6 +289,23 @@ public class TaskServiceTestsSimplified
     }
 
     [Fact]
+    public async Task HandleCronAsync_WhenNoDailies_ShouldNotFetchTodos()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
+            .ReturnsAsync([]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("todos"), Times.Never);
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    [Fact]
     public async Task HandleCronAsync_ShouldNotCreateDuplicatedSnoozedTask_WhenMatchingTaggedTodoAlreadyExists()
     {
         // Arrange

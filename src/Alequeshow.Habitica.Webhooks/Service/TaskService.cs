@@ -38,13 +38,14 @@ public class TaskService(
     private async Task HandleDailyTasks()
     {
         var dailies = await habiticaApiService.GetUserTasksAsync("dailys");
-        var existingSnoozedTodos = await GetExistingSnoozedTodosAsync();
 
         if (!dailies.Any())
         {
             logger.LogWarning("No tasks found.");
             return;
         }
+
+        var existingSnoozedTodos = await GetExistingSnoozedTodosAsync();
 
         foreach (var task in dailies)
         {
