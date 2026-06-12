@@ -141,7 +141,6 @@ public class TaskService(
 
     private bool IsSameSnoozedTask(Domain.Task existingTask, Domain.Task sourceDailyTask)
     {
-        return string.Equals(existingTask.Text, sourceDailyTask.Text, StringComparison.Ordinal)
-            && existingTask.Date?.Date == FollowingDueDate.Date;
+        return string.Equals(existingTask.Text, sourceDailyTask.Text, StringComparison.Ordinal);
     }
 }

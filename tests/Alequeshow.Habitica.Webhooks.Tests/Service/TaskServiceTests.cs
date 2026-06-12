@@ -9,6 +9,7 @@ using DomainTask = Alequeshow.Habitica.Webhooks.Domain.Task;
 using Task = System.Threading.Tasks.Task;
 
 namespace Alequeshow.Habitica.Webhooks.Tests.Service;
+
 public class TaskServiceTestsSimplified
 {
     private readonly Mock<ILogger<TaskService>> _mockLogger;
@@ -314,7 +315,6 @@ public class TaskServiceTestsSimplified
 
         var dailyTask = CreateTestTask("daily", taskName, [SnoozedTagId], isDue: true);
         var existingTodo = CreateTestTask("todo", taskName, [SnoozedTagId], isDue: false);
-        existingTodo.Date = DateTime.Today.FromBrtToUtc().AddDays(1);
         existingTodo.Completed = false;
 
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
@@ -326,6 +326,30 @@ public class TaskServiceTestsSimplified
         await service.HandleCronAsync();
 
         // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotCreateDuplicatedSnoozedTask_WhenTodoHasSameTitleButDifferentDate()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var taskName = "Snoozed Task";
+
+        var dailyTask = CreateTestTask("daily", taskName, [SnoozedTagId], isDue: true);
+        var existingTodo = CreateTestTask("todo", taskName, [SnoozedTagId], isDue: false);
+        existingTodo.Date = DateTime.Today.AddDays(-5); // different date from FollowingDueDate
+        existingTodo.Completed = false;
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
+            .ReturnsAsync([dailyTask]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
+            .ReturnsAsync([existingTodo]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert - title match alone is sufficient to prevent duplication
         _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
     }
 
