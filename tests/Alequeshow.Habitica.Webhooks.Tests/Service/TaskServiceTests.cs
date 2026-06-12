@@ -9,6 +9,7 @@ using DomainTask = Alequeshow.Habitica.Webhooks.Domain.Task;
 using Task = System.Threading.Tasks.Task;
 
 namespace Alequeshow.Habitica.Webhooks.Tests.Service;
+
 public class TaskServiceTestsSimplified
 {
     private readonly Mock<ILogger<TaskService>> _mockLogger;
