@@ -28,7 +28,7 @@ public record Task
     public List<History>? History { get; set; }
 
     /// <summary>
-    /// Daily Only
+    /// Daily and Habit
     /// </summary>
     public string? Frequency { get; set; }
 
@@ -52,7 +52,47 @@ public record Task
     /// </summary>
     public bool? Completed { get; set; }
 
+    /// <summary>
+    /// Habit Only
+    /// </summary>
+    public bool? Up { get; set; }
+
+    /// <summary>
+    /// Habit Only
+    /// </summary>
+    public bool? Down { get; set; }
+
+    /// <summary>
+    /// Habit Only
+    /// </summary>
+    public int? CounterUp { get; set; }
+
+    /// <summary>
+    /// Habit Only
+    /// </summary>
+    public int? CounterDown { get; set; }
+
     public bool IsDaily() => string.Equals(Type, "daily", StringComparison.CurrentCultureIgnoreCase);
+
+    public bool IsHabit() => string.Equals(Type, "habit", StringComparison.CurrentCultureIgnoreCase);
+
+    public bool IsWeakHabit(DateTime? date = null)
+    {
+        if (!IsHabit())
+            return false;
+
+        var today = date ?? DateTime.Today;
+        var counterDown = CounterDown ?? 0;
+        var counterUp = CounterUp ?? 0;
+
+        return Frequency switch
+        {
+            "daily" => counterUp == 0 || counterDown < 0,
+            "weekly" => today.DayOfWeek == DayOfWeek.Saturday && (counterUp < 2 || counterDown < 0),
+            "monthly" => today.Day == DateTime.DaysInMonth(today.Year, today.Month) && (counterUp < 2 || counterDown < 0),
+            _ => false
+        };
+    }
 
     public bool IsDueInDate(DateTime? date = null)
     {

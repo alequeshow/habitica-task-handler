@@ -254,6 +254,8 @@ public class TaskServiceTestsSimplified
                        .ReturnsAsync([snoozedTask]);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
                        .ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits"))
+                       .ReturnsAsync([]);
 
         // Act
         await service.HandleCronAsync();
@@ -281,6 +283,8 @@ public class TaskServiceTestsSimplified
                        .ReturnsAsync([snoozedTask]);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
                        .ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits"))
+                       .ReturnsAsync([]);
 
         // Act
         await service.HandleCronAsync();
@@ -296,6 +300,8 @@ public class TaskServiceTestsSimplified
         var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
 
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys"))
+            .ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits"))
             .ReturnsAsync([]);
 
         // Act
@@ -321,6 +327,8 @@ public class TaskServiceTestsSimplified
             .ReturnsAsync([dailyTask]);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
             .ReturnsAsync([existingTodo]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits"))
+            .ReturnsAsync([]);
 
         // Act
         await service.HandleCronAsync();
@@ -345,12 +353,258 @@ public class TaskServiceTestsSimplified
             .ReturnsAsync([dailyTask]);
         _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos"))
             .ReturnsAsync([existingTodo]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits"))
+            .ReturnsAsync([]);
 
         // Act
         await service.HandleCronAsync();
 
         // Assert - title match alone is sufficient to prevent duplication
         _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    // ---- Habit handling tests ----
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldFetchHabits()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("habits"), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldCreateTodo_ForWeakDailyHabitWithSnoozeTag()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var habitName = "Weak Daily Habit";
+
+        var weakHabit = CreateHabitTask(habitName, [SnoozedTagId], "daily", counterUp: 0);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([weakHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()))
+            .ReturnsAsync(CreateTestTask("todo", habitName, [SnoozedTagId]));
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.Is<DomainTask>(
+            t => t.Type == "todo" &&
+                 t.Text == habitName &&
+                 t.Notes == "Habit Snoozed. Do it!!" &&
+                 t.Frequency == null &&
+                 t.CounterUp == null &&
+                 t.CounterDown == null
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotCreateTodo_ForStrongDailyHabit()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        var strongHabit = CreateHabitTask("Strong Daily Habit", [SnoozedTagId], "daily", counterUp: 1);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([strongHabit]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotCreateTodo_ForHabitWithoutSnoozeTag()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        var habitWithoutTag = CreateHabitTask("Habit Without Tag", ["other-tag"], "daily", counterUp: 0);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([habitWithoutTag]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotFetchTodos_WhenNoTaggedHabitsFound()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        var habitWithoutTag = CreateHabitTask("Habit Without Tag", ["other-tag"], "daily", counterUp: 0);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([habitWithoutTag]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert - todos should NOT be fetched when no tagged habits exist
+        _mockHabiticaApiService.Verify(x => x.GetUserTasksAsync("todos"), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldNotCreateDuplicateTodo_WhenSnoozedTodoAlreadyExistsForHabit()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var habitName = "Weak Daily Habit";
+
+        var weakHabit = CreateHabitTask(habitName, [SnoozedTagId], "daily", counterUp: 0);
+        var existingTodo = CreateTestTask("todo", habitName, [SnoozedTagId], isDue: false);
+        existingTodo.Completed = false;
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([weakHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([existingTodo]);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_WeakHabitTodo_ShouldContainSameTagsAsHabit()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var habitName = "Tagged Habit";
+        var extraTag = "extra-tag";
+
+        var weakHabit = CreateHabitTask(habitName, [SnoozedTagId, extraTag], "daily", counterUp: 0);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([weakHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()))
+            .ReturnsAsync(CreateTestTask("todo", habitName, [SnoozedTagId, extraTag]));
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.Is<DomainTask>(
+            t => t.Tags != null &&
+                 t.Tags.Contains(SnoozedTagId) &&
+                 t.Tags.Contains(extraTag)
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_WeakHabitTodo_ShouldHaveFollowingDueDate()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var habitName = "Due Date Habit";
+
+        var weakHabit = CreateHabitTask(habitName, [SnoozedTagId], "daily", counterUp: 0);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([weakHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()))
+            .ReturnsAsync(CreateTestTask("todo", habitName, [SnoozedTagId]));
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.Is<DomainTask>(
+            t => t.Date.HasValue
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldHandleHabitApiException_WithoutPropagating()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var habitName = "Failing Habit";
+
+        var weakHabit = CreateHabitTask(habitName, [SnoozedTagId], "daily", counterUp: 0);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([weakHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()))
+            .ThrowsAsync(new Exception("API error"));
+
+        // Act - should not throw
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_DailyHabitWithNegativeCounterDown_ShouldBeConsideredWeak()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+        var habitName = "Negative Counter Habit";
+
+        var weakHabit = CreateHabitTask(habitName, [SnoozedTagId], "daily", counterUp: 5, counterDown: -1);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits")).ReturnsAsync([weakHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()))
+            .ReturnsAsync(CreateTestTask("todo", habitName, [SnoozedTagId]));
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.Is<DomainTask>(
+            t => t.Type == "todo" && t.Text == habitName
+        )), Times.Once);
+    }
+
+    [Fact]
+    public async Task HandleCronAsync_ShouldProcessMultipleWeakHabits()
+    {
+        // Arrange
+        var service = new TaskService(_mockLogger.Object, _mockOptions.Object, _mockHabiticaApiService.Object);
+
+        var weakHabit1 = CreateHabitTask("Weak Habit 1", [SnoozedTagId], "daily", counterUp: 0);
+        var weakHabit2 = CreateHabitTask("Weak Habit 2", [SnoozedTagId], "daily", counterUp: 0);
+        var strongHabit = CreateHabitTask("Strong Habit", [SnoozedTagId], "daily", counterUp: 2);
+
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("dailys")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("habits"))
+            .ReturnsAsync([weakHabit1, weakHabit2, strongHabit]);
+        _mockHabiticaApiService.Setup(x => x.GetUserTasksAsync("todos")).ReturnsAsync([]);
+        _mockHabiticaApiService.Setup(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()))
+            .ReturnsAsync((DomainTask t) => t);
+
+        // Act
+        await service.HandleCronAsync();
+
+        // Assert - only 2 todos created (for the 2 weak habits)
+        _mockHabiticaApiService.Verify(x => x.CreateUserTasksAsync(It.IsAny<DomainTask>()), Times.Exactly(2));
     }
 
     private static DomainTask CreateTestTask(string type, string text, List<string> tags, bool isDue = true)
@@ -382,5 +636,23 @@ public class TaskServiceTestsSimplified
         }
 
         return task;
+    }
+
+    private static DomainTask CreateHabitTask(string text, List<string> tags, string frequency, int counterUp, int counterDown = 0)
+    {
+        return new DomainTask
+        {
+            Id = Guid.NewGuid().ToString(),
+            Type = "habit",
+            Text = text,
+            Tags = tags,
+            Frequency = frequency,
+            CounterUp = counterUp,
+            CounterDown = counterDown,
+            Up = true,
+            Down = false,
+            Value = 1.0,
+            Priority = 1.0
+        };
     }
 }
