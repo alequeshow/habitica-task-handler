@@ -649,4 +649,290 @@ public class TaskTests
             Completed = completed
         };
     }
+
+    [Fact]
+    public void IsHabit_WhenTypeIsHabit_ReturnsTrue()
+    {
+        var task = new DomainTask { Type = "habit", Text = "Test Habit" };
+        Assert.True(task.IsHabit());
+    }
+
+    [Fact]
+    public void IsHabit_WhenTypeIsHabitUpperCase_ReturnsTrue()
+    {
+        var task = new DomainTask { Type = "HABIT", Text = "Test Habit" };
+        Assert.True(task.IsHabit());
+    }
+
+    [Theory]
+    [InlineData("daily")]
+    [InlineData("todo")]
+    [InlineData("reward")]
+    [InlineData("")]
+    public void IsHabit_WhenTypeIsNotHabit_ReturnsFalse(string type)
+    {
+        var task = new DomainTask { Type = type, Text = "Test Task" };
+        Assert.False(task.IsHabit());
+    }
+
+    [Fact]
+    public void IsWeakHabit_WhenTypeIsNotHabit_ReturnsFalse()
+    {
+        var task = new DomainTask { Type = "daily", Text = "Test", Frequency = "daily", CounterUp = 0 };
+        Assert.False(task.IsWeakHabit(DateTime.Today));
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(0, -1)]
+    public void IsWeakHabit_DailyHabit_ReturnsTrueWhenCounterUpIsZeroOrCounterDownIsNegative(int counterUp, int counterDown)
+    {
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "daily",
+            CounterUp = counterUp,
+            CounterDown = counterDown
+        };
+        Assert.True(task.IsWeakHabit(DateTime.Today));
+    }
+
+    [Theory]
+    [InlineData(1, 0)]
+    [InlineData(2, 0)]
+    [InlineData(5, 0)]
+    public void IsWeakHabit_DailyHabit_ReturnsFalseWhenCounterUpIsPositive(int counterUp, int counterDown)
+    {
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "daily",
+            CounterUp = counterUp,
+            CounterDown = counterDown
+        };
+        Assert.False(task.IsWeakHabit(DateTime.Today));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WeeklyHabit_ReturnsTrueOnSaturdayWithLowCounter()
+    {
+        var saturday = GetNextDayOfWeek(DayOfWeek.Saturday);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "weekly",
+            CounterUp = 1,
+            CounterDown = 0
+        };
+        Assert.True(task.IsWeakHabit(saturday));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WeeklyHabit_ReturnsTrueOnSaturdayWithZeroCounter()
+    {
+        var saturday = GetNextDayOfWeek(DayOfWeek.Saturday);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "weekly",
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.True(task.IsWeakHabit(saturday));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WeeklyHabit_ReturnsFalseOnSaturdayWithSufficientCounter()
+    {
+        var saturday = GetNextDayOfWeek(DayOfWeek.Saturday);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "weekly",
+            CounterUp = 2,
+            CounterDown = 0
+        };
+        Assert.False(task.IsWeakHabit(saturday));
+    }
+
+    [Theory]
+    [InlineData(DayOfWeek.Sunday)]
+    [InlineData(DayOfWeek.Monday)]
+    [InlineData(DayOfWeek.Tuesday)]
+    [InlineData(DayOfWeek.Wednesday)]
+    [InlineData(DayOfWeek.Thursday)]
+    [InlineData(DayOfWeek.Friday)]
+    public void IsWeakHabit_WeeklyHabit_ReturnsFalseOnNonSaturdayRegardlessOfCounter(DayOfWeek dayOfWeek)
+    {
+        var nonSaturday = GetNextDayOfWeek(dayOfWeek);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "weekly",
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.False(task.IsWeakHabit(nonSaturday));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WeeklyHabit_ReturnsTrueOnSaturdayWithNegativeCounterDown()
+    {
+        var saturday = GetNextDayOfWeek(DayOfWeek.Saturday);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "weekly",
+            CounterUp = 5,
+            CounterDown = -1
+        };
+        Assert.True(task.IsWeakHabit(saturday));
+    }
+
+    [Fact]
+    public void IsWeakHabit_MonthlyHabit_ReturnsTrueOnLastDayOfMonthWithLowCounter()
+    {
+        var lastDayOfMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month,
+            DateTime.DaysInMonth(DateTime.Today.Year, DateTime.Today.Month));
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "monthly",
+            CounterUp = 1,
+            CounterDown = 0
+        };
+        Assert.True(task.IsWeakHabit(lastDayOfMonth));
+    }
+
+    [Fact]
+    public void IsWeakHabit_MonthlyHabit_ReturnsTrueOnLastDayWithZeroCounter()
+    {
+        var lastDayOfMonth = new DateTime(2026, 1, 31);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "monthly",
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.True(task.IsWeakHabit(lastDayOfMonth));
+    }
+
+    [Fact]
+    public void IsWeakHabit_MonthlyHabit_ReturnsFalseOnLastDayWithSufficientCounter()
+    {
+        var lastDayOfMonth = new DateTime(2026, 1, 31);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "monthly",
+            CounterUp = 2,
+            CounterDown = 0
+        };
+        Assert.False(task.IsWeakHabit(lastDayOfMonth));
+    }
+
+    [Fact]
+    public void IsWeakHabit_MonthlyHabit_ReturnsFalseOnNonLastDayEvenWithLowCounter()
+    {
+        var nonLastDay = new DateTime(2026, 1, 15);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "monthly",
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.False(task.IsWeakHabit(nonLastDay));
+    }
+
+    [Fact]
+    public void IsWeakHabit_MonthlyHabit_ReturnsTrueOnLastDayWithNegativeCounterDown()
+    {
+        var lastDayOfMonth = new DateTime(2026, 1, 31);
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "monthly",
+            CounterUp = 5,
+            CounterDown = -1
+        };
+        Assert.True(task.IsWeakHabit(lastDayOfMonth));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WithNullCounters_TreatsAsZero()
+    {
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "daily",
+            CounterUp = null,
+            CounterDown = null
+        };
+        Assert.True(task.IsWeakHabit(DateTime.Today));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WithUnknownFrequency_ReturnsFalse()
+    {
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "unknown",
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.False(task.IsWeakHabit(DateTime.Today));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WithNullFrequency_ReturnsFalse()
+    {
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = null,
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.False(task.IsWeakHabit(DateTime.Today));
+    }
+
+    [Fact]
+    public void IsWeakHabit_WithNullDate_UsesToday()
+    {
+        // A daily habit with counterUp = 0 should always return true regardless of date
+        var task = new DomainTask
+        {
+            Type = "habit",
+            Text = "Test",
+            Frequency = "daily",
+            CounterUp = 0,
+            CounterDown = 0
+        };
+        Assert.True(task.IsWeakHabit(null));
+    }
+
+    private static DateTime GetNextDayOfWeek(DayOfWeek targetDay)
+    {
+        var today = DateTime.Today;
+        int daysUntilTarget = ((int)targetDay - (int)today.DayOfWeek + 7) % 7;
+        return today.AddDays(daysUntilTarget == 0 ? 0 : daysUntilTarget);
+    }
 }

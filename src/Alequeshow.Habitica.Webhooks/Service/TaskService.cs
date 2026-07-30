@@ -33,6 +33,7 @@ public class TaskService(
     public async Task HandleCronAsync()
     {
         await HandleDailyTasks();
+        await HandleWeakHabitTasksAsync();
     }
 
     private async Task HandleDailyTasks()
@@ -113,6 +114,79 @@ public class TaskService(
             {
                 logger.LogError(ex, "Error while handling Snoozed task. Task: {Task}", task.ToString());
             }
+        }
+    }
+
+    private async Task HandleWeakHabitTasksAsync()
+    {
+        var habits = await habiticaApiService.GetUserTasksAsync("habits");
+
+        var taggedHabits = habits.Where(h => h.HasTag(SnoozeableTagId)).ToList();
+
+        if (!taggedHabits.Any())
+        {
+            logger.LogInformation("No habits with snooze tag found.");
+            return;
+        }
+
+        var existingSnoozedTodos = await GetExistingSnoozedTodosAsync();
+
+        foreach (var habit in taggedHabits)
+        {
+            await HandleSnoozedHabitAsync(habit, existingSnoozedTodos);
+        }
+    }
+
+    private async Task HandleSnoozedHabitAsync(Domain.Task habit, List<Domain.Task> existingSnoozedTodos)
+    {
+        if (!habit.IsWeakHabit(IsDueDateComparer))
+            return;
+
+        try
+        {
+            if (existingSnoozedTodos.Any(existingTask => IsSameSnoozedTask(existingTask, habit)))
+            {
+                logger.LogInformation("Snoozed todo already exists for habit {TaskId}. Skipping creation.", habit.Id);
+                return;
+            }
+
+            var todoTask = habit with
+            {
+                Type = "todo",
+                Completed = false,
+                Tags = habit.Tags?.Distinct().ToList(),
+                Date = FollowingDueDate,
+                Checklist = null,
+                Reminders = [
+                    new Domain.Reminder
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Time = FollowingDueDate.AddHours(10),
+                    }
+                ],
+                Notes = "Habit Snoozed. Do it!!",
+                Id = null,
+                Frequency = null,
+                Streak = null,
+                IsDue = null,
+                History = null,
+                Up = null,
+                Down = null,
+                CounterUp = null,
+                CounterDown = null,
+            };
+
+            logger.LogInformation("Weak habit detected, creating snoozed todo with payload {NewTask}", todoTask);
+
+            var result = await habiticaApiService.CreateUserTasksAsync(todoTask);
+
+            existingSnoozedTodos.Add(result);
+
+            logger.LogInformation("Snoozed todo created for habit! {NewTask}", result.ToString());
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error while handling snoozed habit. Habit: {Habit}", habit.ToString());
         }
     }
 
